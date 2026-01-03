@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, googleProvider } from '../firebase';
+import { auth, googleProvider, db } from '../firebase';
 import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { Mail, Lock, User, ArrowRight, ShieldCheck, Coins } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
 import { Handshake } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
 
@@ -18,15 +19,32 @@ const Auth = () => {
   const { setUser } = useUserStore();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user && user.emailVerified) {
-        navigate('/', { replace: true });
-      } else {
-        setChecking(false);
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          
+          if (userDoc.exists()) {            
+            const userData = { 
+              uid: user.uid, 
+              email: user.email, 
+              ...userDoc.data() 
+            };
+            setUser(userData);
+          } else {
+            setUser({ uid: user.uid, email: user.email });
+          }
+          navigate('/', { replace: true });
+
+        } catch (err) {
+          console.error("Error fetching user data:", err);
+        }
       }
+      setChecking(false);
     });
+
     return () => unsubscribe();
-  }, [navigate]);
+  }, [navigate, setUser]);
 
   if (checking) {
     return (
