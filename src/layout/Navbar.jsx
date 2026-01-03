@@ -8,7 +8,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="bg-white border-b">
+      <header className="bg-white">
         <div
           className="
             max-w-7xl mx-auto px-4 py-3
@@ -40,7 +40,7 @@ export default function Navbar() {
               rounded-full bg-gradient-to-r from-indigo-500 to-purple-500
               text-white text-sm font-medium
               col-span-1 flex items-center gap-2 justify-center
-              h-12 w-12 ml-auto
+              h-12 w-12 ml-auto mr-1
             "
           >
             <Plus />

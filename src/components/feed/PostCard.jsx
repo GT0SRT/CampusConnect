@@ -1,63 +1,188 @@
-import { Heart } from 'lucide-react';
-import { MessageCircle } from 'lucide-react';
-import { Share2 } from 'lucide-react';
-import { Bookmark } from 'lucide-react';
+import { useState } from 'react';
+import { Heart, MessageCircle, Share2, Bookmark, Send } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { getAuth } from 'firebase/auth';
+import { toggleBookmark, toggleLike, addComment } from '../../services/interactionService';
+import CommentsModal from '../modals/CommentsModal';
 
 export default function PostCard({ post }) {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  // Local State for Optimistic UI Updates
+  const [isLiked, setIsLiked] = useState(post.likedBy?.includes(user?.uid) || false);
+  const [likesCount, setLikesCount] = useState(post.likes || 0);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [isSaved, setIsSaved] = useState(false); 
+  
+  const [showCommentInput, setShowCommentInput] = useState(false);
+  const [commentText, setCommentText] = useState("");
+
+  const handleLike = async () => {
+    if (!user) return alert("Please login to like");
+    const newStatus = !isLiked;
+    setIsLiked(newStatus);
+    setLikesCount(prev => newStatus ? prev + 1 : prev - 1);
+
+    try {
+      await toggleLike(user.uid, post.id, !newStatus);
+    } catch (error) {
+      setIsLiked(!newStatus);
+      setLikesCount(prev => !newStatus ? prev + 1 : prev - 1);
+      console.error("Like failed", error);
+    }
+  };
+
+  const handleBookmark = async () => {
+    if (!user) return alert("Please login to save");
+    
+    setIsSaved(!isSaved);
+    try {
+      await toggleBookmark(user.uid, post.id, isSaved);
+    } catch (error) {
+      setIsSaved(!isSaved);
+    }
+  };
+
+  const handleCommentSubmit = async (e) => {
+    e.preventDefault();
+    if (!commentText.trim() || !user) return;
+
+    try {
+      await addComment(user.uid, post.id, commentText);
+      setCommentText("");
+      setShowCommentInput(false);
+      alert("Comment added!"); // Replace with toast notification later
+    } catch (error) {
+      console.error("Comment failed", error);
+    }
+  };
+
+  // Safe Date Formatting
+  const timeAgo = post.createdAt?.seconds 
+    ? formatDistanceToNow(new Date(post.createdAt.seconds * 1000), { addSuffix: true }) 
+    : "Just now";
+
   return (
-    <div className="bg-white rounded-xl overflow-hidden border">
+    <div className="bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm mb-4">
+      
       {/* Header */}
       <div className="p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-gray-300"></div>
+        <img 
+          src={post.author?.profile_pic || "https://via.placeholder.com/40"} 
+          alt={post.author?.name} 
+          className="w-10 h-10 rounded-full object-cover bg-gray-200 border border-gray-100" 
+        />
         <div className="flex-1">
-          <p className="font-medium text-sm">{post.author}</p>
-          <p className="text-xs text-gray-500">
-            {post.college} · {post.time}
+          <p className="font-semibold text-sm text-gray-900">{post.author?.name || "Anonymous"}</p>
+          <p className="text-xs text-gray-500 font-medium">
+            {post.author?.campus || "General"} · {timeAgo}
           </p>
         </div>
-        <span className="text-gray-400">•••</span>
+        <button className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-50 transition">•••</button>
       </div>
 
       {/* Image */}
-      <img
-        src={post.image}
-        alt=""
-        className="w-full max-h-[420px] object-cover"
-      />
+      {post.imageUrl && (
+        <div className="bg-gray-50 w-full flex justify-center">
+           <img
+             src={post.imageUrl}
+             alt="Post content"
+             className="w-full max-h-[500px] object-contain"
+             loading="lazy"
+           />
+        </div>
+      )}
 
       {/* Actions */}
-      <div className="p-4 space-y-2">
-        <div className="grid grid-cols-4 gap-4 text-gray-600 text-lg">
-            <div className='col-span-2 flex gap-6'>
-                <Heart />
-                <MessageCircle />
-                <Share2 />
+      <div className="p-4 space-y-3">
+        <div className="flex items-center justify-between text-gray-600">
+            <div className='flex gap-6'>
+                {/* LIKE BUTTON */}
+                <div className='flex flex-col items-center justify-center'>
+                  <button 
+                    onClick={handleLike}
+                    className={`transition-transform active:scale-90 hover:text-red-500 ${isLiked ? "text-red-500" : ""}`}
+                  >
+                    <Heart className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`} />
+                  </button>
+                  {likesCount}
+                </div>
+
+                {/* COMMENT TOGGLE */}
+                <div className='flex flex-col items-center justify-center'>
+                  <button 
+                    onClick={() => setShowCommentsModal(true)}
+                    className="hover:text-blue-500 transition"
+                  >
+                    <MessageCircle className="w-6 h-6" />
+                  </button>
+                  {post.comments || 0}
+                </div>
+
+                {/* SHARE */}
+                <button className="hover:text-green-500 mb-auto transition"><Share2 className="w-6 h-6" /></button>
             </div>
-            <div className='col-span-2 ml-auto'><Bookmark /></div>
-        </div>
-
-        <p className="text-sm font-medium">{post.likes} likes</p>
-
-        <p className="text-sm">
-          <span className="font-medium">{post.author}</span>{" "}
-          {post.caption}
-        </p>
-
-        <div className="flex gap-2">
-          {post.tags.map(tag => (
-            <span
-              key={tag}
-              className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full"
+            
+            {/* BOOKMARK */}
+            <button 
+              onClick={handleBookmark}
+              className={`hover:text-yellow-500 transition ${isSaved ? "text-yellow-500" : ""}`}
             >
-              #{tag}
-            </span>
-          ))}
+              <Bookmark className={`w-6 h-6 ${isSaved ? "fill-current" : ""}`} />
+            </button>
         </div>
 
-        <p className="text-xs text-gray-500">
-          View all 156 comments
-        </p>
+        {/* Likes Count */}
+        <p className="text-sm font-bold text-gray-900">{likesCount} likes</p>
+
+        {/* Caption */}
+        {post.caption && (
+          <p className="text-sm text-gray-800 leading-relaxed">
+            <span className="font-semibold mr-2">{post.author?.name}</span>
+            {post.caption}
+          </p>
+        )}
+
+        {/* Tags */}
+        {post.tags && post.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {post.tags.map(tag => (
+              <span key={tag} className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-medium">
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Comment Input Box (Hidden by default) */}
+        {showCommentInput && (
+          <form onSubmit={handleCommentSubmit} className="flex gap-2 items-center mt-3 pt-3 border-t border-gray-100">
+            <input 
+              type="text" 
+              placeholder="Add a comment..." 
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              className="flex-1 text-sm bg-gray-50 border-none rounded-full px-4 py-2 focus:ring-1 focus:ring-blue-500 outline-none"
+            />
+            <button 
+              type="submit" 
+              disabled={!commentText.trim()}
+              className="text-blue-600 disabled:text-blue-300 font-semibold text-sm p-2"
+            >
+              Post
+            </button>
+          </form>
+        )}
       </div>
+
+      {/* RENDER MODAL OUTSIDE THE CARD */}
+      {showCommentsModal && (
+        <CommentsModal 
+          postId={post.id} 
+          onClose={() => setShowCommentsModal(false)} 
+        />
+      )}
     </div>
   );
 }
