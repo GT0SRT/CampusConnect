@@ -49,14 +49,30 @@ export const getUserProfile = async (uid) => {
   }
 };
 
+// export const updateUserProfile = async (uid, updateData) => {
+//   try {
+//     const userRef = doc(db, "users", uid);
+//     // updateDoc only updates the fields passed to it, leaving Karma/Posts intact
+//     await updateDoc(userRef, {
+//       ...updateData,
+//       updatedAt: serverTimestamp() 
+//     });
+//   } catch (error) {
+//     console.error("Error updating profile:", error);
+//     throw error;
+//   }
+// };
+
+
 export const updateUserProfile = async (uid, updateData) => {
   try {
     const userRef = doc(db, "users", uid);
-    // updateDoc only updates the fields passed to it, leaving Karma/Posts intact
-    await updateDoc(userRef, {
+
+    await setDoc(userRef, {
       ...updateData,
-      updatedAt: serverTimestamp() 
-    });
+      updatedAt: serverTimestamp()
+    }, { merge: true }); 
+
   } catch (error) {
     console.error("Error updating profile:", error);
     throw error;

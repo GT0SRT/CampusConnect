@@ -109,3 +109,11 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
     </div>
   );
 }
+
+
+
+
+
+
+
+
