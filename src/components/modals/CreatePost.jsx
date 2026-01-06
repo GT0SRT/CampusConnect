@@ -34,9 +34,9 @@ export default function CreatePost({ onClose, onPostCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check profile completion first
-    if (!user.name || !user.campus || !user.branch || !user.batch || !user.profile_pic) {
-      return alert("Please complete your profile first (name, campus, branch, batch, and profile picture are required).");
+    // Check profile completion first (photo optional)
+    if (!user.name || !user.campus || !user.branch || !user.batch) {
+      return alert("Please complete your profile first (name, campus, branch, and batch are required).");
     }
 
     if (!imageFile) return alert("Please select an image!");

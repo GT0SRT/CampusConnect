@@ -11,15 +11,12 @@ export default function PostCard({ post, onPostDeleted }) {
   const auth = getAuth();
   const user = auth.currentUser;
   const { user: userData, updateUser } = useUserStore();
-
-  // Local State for Optimistic UI Updates
   const [isLiked, setIsLiked] = useState(post.likedBy?.includes(user?.uid) || false);
   const [likesCount, setLikesCount] = useState(post.likes || 0);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [isSaved, setIsSaved] = useState(userData?.savedPosts?.includes(post.id) || false);
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
   const [showCommentInput, setShowCommentInput] = useState(false);
   const [commentText, setCommentText] = useState("");
 
@@ -99,7 +96,7 @@ export default function PostCard({ post, onPostDeleted }) {
       {/* Header */}
       <div className="p-4 flex items-center gap-3 relative">
         <img
-          src={post.author?.profile_pic || "https://ui-avatars.com/api/?name=User&background=random&size=40"}
+          src={post.author?.profile_pic || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || "User")}&background=random&size=40`}
           alt={post.author?.name}
           className="w-10 h-10 rounded-full object-cover bg-gray-200 border border-gray-100"
         />
@@ -129,7 +126,7 @@ export default function PostCard({ post, onPostDeleted }) {
                   className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-lg transition disabled:opacity-50"
                 >
                   <Trash2 size={16} />
-                  Delete Post
+                  Delete
                 </button>
               )}
               {user?.uid !== post.uid && (

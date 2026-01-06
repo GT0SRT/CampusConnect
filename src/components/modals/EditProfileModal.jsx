@@ -53,7 +53,6 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
     if (!formData.campus.trim()) return alert("Campus is required");
     if (!formData.branch.trim()) return alert("Branch is required");
     if (!formData.batch.trim()) return alert("Batch is required");
-    if (!previewUrl) return alert("Profile picture is required");
 
     setLoading(true);
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { auth, googleProvider, db } from '../firebase';
 import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { Mail, Lock, ArrowRight, Handshake, Sparkles } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useUserStore } from '../store/useUserStore';
 
 const Auth = () => {
@@ -17,22 +17,38 @@ const Auth = () => {
   const navigate = useNavigate();
   const { setUser } = useUserStore();
 
+  const ensureUserProfile = async (uid, email) => {
+    const userRef = doc(db, 'users', uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) {
+      const defaults = {
+        uid,
+        email,
+        name: '',
+        bio: '',
+        campus: '',
+        branch: '',
+        batch: '',
+        profile_pic: '',
+        postsCount: 0,
+        threadsCount: 0,
+        karmaCount: 0,
+        savedPosts: [],
+        savedThreads: [],
+        createdAt: serverTimestamp(),
+      };
+      await setDoc(userRef, defaults);
+      return defaults;
+    }
+    return { uid, email, ...snap.data() };
+  };
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user && user.emailVerified) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-
-          if (userDoc.exists()) {
-            const userData = {
-              uid: user.uid,
-              email: user.email,
-              ...userDoc.data()
-            };
-            setUser(userData);
-          } else {
-            setUser({ uid: user.uid, email: user.email });
-          }
+          const userData = await ensureUserProfile(user.uid, user.email);
+          setUser(userData);
           navigate('/', { replace: true });
 
         } catch (err) {
@@ -65,12 +81,9 @@ const Auth = () => {
     try {
       if (isLogin) {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-
-        if (userDoc.exists()) {
-          setUser({ uid: userCredential.user.uid, ...userDoc.data() });
-          navigate('/');
-        }
+        const userData = await ensureUserProfile(userCredential.user.uid, userCredential.user.email);
+        setUser(userData);
+        navigate('/');
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await sendEmailVerification(userCredential.user);
@@ -93,13 +106,8 @@ const Auth = () => {
     setIsLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-
-      if (userDoc.exists()) {
-        setUser({ uid: result.user.uid, email: result.user.email, ...userDoc.data() });
-      } else {
-        setUser({ uid: result.user.uid, email: result.user.email });
-      }
+      const userData = await ensureUserProfile(result.user.uid, result.user.email);
+      setUser(userData);
       navigate('/');
     } catch (err) {
       console.error('Google Sign-In Error:', err);

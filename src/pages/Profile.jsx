@@ -124,7 +124,7 @@ export default function Profile() {
 
         {/* Profile Pic */}
         <img
-          src={user.profile_pic || "https://ui-avatars.com/api/?name=User&background=random&size=150"}
+          src={user.profile_pic || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || "User")}&background=random&size=150`}
           alt="Profile"
           className="w-24 h-24 rounded-full object-cover bg-gray-200 border-4 border-white shadow-sm"
         />
