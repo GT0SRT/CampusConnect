@@ -1,4 +1,4 @@
-import { 
+import {
   collection, query, where, orderBy, getDocs, doc, getDoc, addDoc, updateDoc, increment, serverTimestamp, arrayUnion, arrayRemove
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -7,7 +7,7 @@ import { db } from "../firebase";
 export const toggleBookmark = async (userId, postId, isAlreadySaved) => {
   try {
     const userRef = doc(db, "users", userId);
-    
+
     if (isAlreadySaved) {
       await updateDoc(userRef, {
         savedPosts: arrayRemove(postId)
@@ -19,6 +19,26 @@ export const toggleBookmark = async (userId, postId, isAlreadySaved) => {
     }
   } catch (error) {
     console.error("Error toggling bookmark:", error);
+    throw error;
+  }
+};
+
+// Thread bookmarks
+export const toggleThreadBookmark = async (userId, threadId, isAlreadySaved) => {
+  try {
+    const userRef = doc(db, "users", userId);
+
+    if (isAlreadySaved) {
+      await updateDoc(userRef, {
+        savedThreads: arrayRemove(threadId)
+      });
+    } else {
+      await updateDoc(userRef, {
+        savedThreads: arrayUnion(threadId)
+      });
+    }
+  } catch (error) {
+    console.error("Error toggling thread bookmark:", error);
     throw error;
   }
 };
@@ -99,17 +119,17 @@ export const toggleLike = async (userId, postId, isAlreadyLiked) => {
 export const getComments = async (postId) => {
   try {
     const q = query(
-      collection(db, "comments"), 
+      collection(db, "comments"),
       where("postId", "==", postId),
       orderBy("createdAt", "desc")
     );
-    
+
     const snapshot = await getDocs(q);
 
     // Fetch author details for each comment
     const commentsPromises = snapshot.docs.map(async (commentDoc) => {
       const data = commentDoc.data();
-      
+
       let author = { name: "Unknown", profile_pic: "" };
       if (data.userId) {
         const userSnap = await getDoc(doc(db, "users", data.userId));

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { getComments, addComment, addReply } from "../../services/interactionService";
 import { useUserStore } from "../../store/useUserStore";
-import { X, Send } from "lucide-react"; 
+import { X, Send } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export default function CommentsModal({ postId, onClose }) {
@@ -44,7 +44,7 @@ export default function CommentsModal({ postId, onClose }) {
         setComments([tempComment, ...comments]);
         setNewComment("");
         await addComment(user.uid, postId, newComment);
-        fetchComments(); 
+        fetchComments();
       } catch (error) {
         console.error("Failed to comment", error);
       }
@@ -82,7 +82,7 @@ export default function CommentsModal({ postId, onClose }) {
   const initiateReply = (parentId, username) => {
     setReplyingTo({ parentId, username });
     setNewComment(`@${username} `); // Instagram style tag
-    
+
     // Focus the input box (simple implementation)
     document.getElementById("comment-input")?.focus();
   };
@@ -97,7 +97,7 @@ export default function CommentsModal({ postId, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white w-full max-w-md rounded-2xl flex flex-col h-[85vh] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        
+
         {/* Header */}
         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
           <h3 className="font-bold text-gray-800">Comments</h3>
@@ -111,21 +111,21 @@ export default function CommentsModal({ postId, onClose }) {
           ) : comments.length > 0 ? (
             comments.map((comment) => (
               <div key={comment.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
-                <img src={comment.author?.profile_pic || "https://via.placeholder.com/40"} className="w-9 h-9 rounded-full object-cover bg-gray-200 border border-gray-100" />
-                
+                <img src={comment.author?.profile_pic || "https://ui-avatars.com/api/?name=User&background=random&size=40"} className="w-9 h-9 rounded-full object-cover bg-gray-200 border border-gray-100" />
+
                 <div className="flex-1">
                   {/* Parent Comment */}
                   <div className="flex gap-2 items-baseline">
                     <span className="text-sm font-bold text-gray-900">{comment.author?.name}</span>
                     <span className="text-sm text-gray-800 leading-snug">{comment.text}</span>
                   </div>
-                  
+
                   {/* Action Line */}
                   <div className="flex items-center gap-4 mt-1">
                     <span className="text-xs text-gray-400">
                       {comment.createdAt?.seconds ? formatDistanceToNow(new Date(comment.createdAt.seconds * 1000), { addSuffix: false }) : "now"}
                     </span>
-                    <button 
+                    <button
                       onClick={() => initiateReply(comment.id, comment.author.name)}
                       className="text-xs font-semibold text-gray-500 hover:text-gray-800"
                     >
@@ -155,17 +155,17 @@ export default function CommentsModal({ postId, onClose }) {
                                   <span className="text-sm font-bold text-gray-900">{reply.author?.name}</span>
                                   {/* Auto-highlight the @Username if present */}
                                   <span className="text-sm text-gray-800 leading-snug">
-                                    {reply.text.split(" ").map((word, i) => 
+                                    {reply.text.split(" ").map((word, i) =>
                                       word.startsWith("@") ? <span key={i} className="text-blue-600 mr-1">{word}</span> : word + " "
                                     )}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-4 mt-1">
                                   <span className="text-xs text-gray-400">
-                                     {/* Simple time logic since nested replies are strings in DB often */}
-                                     Reply
+                                    {/* Simple time logic since nested replies are strings in DB often */}
+                                    Reply
                                   </span>
-                                  <button 
+                                  <button
                                     onClick={() => initiateReply(comment.id, reply.author.name)}
                                     className="text-xs font-semibold text-gray-500 hover:text-gray-800"
                                   >
@@ -175,11 +175,11 @@ export default function CommentsModal({ postId, onClose }) {
                               </div>
                             </div>
                           ))}
-                          
+
                           {/* Hide Button */}
                           <div className="flex items-center gap-3 mt-2 cursor-pointer" onClick={() => toggleThread(comment.id)}>
-                             <div className="h-[1px] w-8 bg-gray-300"></div>
-                             <span className="text-xs font-semibold text-gray-400">Hide replies</span>
+                            <div className="h-[1px] w-8 bg-gray-300"></div>
+                            <span className="text-xs font-semibold text-gray-400">Hide replies</span>
                           </div>
                         </div>
                       )}
@@ -200,7 +200,7 @@ export default function CommentsModal({ postId, onClose }) {
         <div className="p-3 border-t bg-white flex items-center gap-3">
           <img src={user?.profile_pic} className="w-8 h-8 rounded-full bg-gray-200 border border-gray-200" />
           <form onSubmit={handleCommentSubmit} className="flex-1 flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2 border border-transparent focus-within:border-gray-300 transition">
-            <input 
+            <input
               id="comment-input"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
@@ -209,7 +209,7 @@ export default function CommentsModal({ postId, onClose }) {
               autoComplete="off"
             />
             {replyingTo && (
-               <button type="button" onClick={() => { setReplyingTo(null); setNewComment(""); }} className="text-xs font-bold text-gray-400 hover:text-gray-600">X</button>
+              <button type="button" onClick={() => { setReplyingTo(null); setNewComment(""); }} className="text-xs font-bold text-gray-400 hover:text-gray-600">X</button>
             )}
             <button type="submit" disabled={!newComment.trim()} className="text-blue-600 font-semibold text-sm disabled:opacity-50 hover:text-blue-700">
               Post

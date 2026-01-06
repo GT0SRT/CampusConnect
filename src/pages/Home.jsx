@@ -3,7 +3,7 @@ import CreateModal from "../components/modals/CreateModal";
 import FeedTabs from "../components/feed/FeedTabs";
 import PostCard from "../components/feed/PostCard";
 import { getAllPosts } from "../services/postService";
-import { useUserStore } from "../store/useUserStore"; // Use Zustand for cleaner access
+import { useUserStore } from "../store/useUserStore";
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -11,7 +11,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Global");
   
-  const { user } = useUserStore(); // Get current user details for filtering
+  const { user } = useUserStore();
 
   // Fetch posts on load
   const fetchFeed = async () => {

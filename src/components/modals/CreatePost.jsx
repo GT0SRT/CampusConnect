@@ -20,8 +20,8 @@ export default function CreatePost({ onClose, onPostCreated }) {
   const uploadToCloudinary = async () => {
     const data = new FormData();
     data.append("file", imageFile);
-    data.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET); 
-    
+    data.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET);
+
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
     const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
       method: "POST",
@@ -33,20 +33,26 @@ export default function CreatePost({ onClose, onPostCreated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Check profile completion first
+    if (!user.name || !user.campus || !user.branch || !user.batch || !user.profile_pic) {
+      return alert("Please complete your profile first (name, campus, branch, batch, and profile picture are required).");
+    }
+
     if (!imageFile) return alert("Please select an image!");
-    
+
     // Safety check: Ensure we have the user profile data needed for filtering
     if (!user) return alert("User profile not loaded. Please refresh.");
-    
+
     setLoading(true);
     try {
       // 1. Upload Image
       const imageUrl = await uploadToCloudinary();
-      
+
       // 2. Create Post (Passing 'user' object as 4th arg for filters)
       await createPost(user.uid, imageUrl, caption, user);
-      
-      if(onPostCreated) onPostCreated(); 
+
+      if (onPostCreated) onPostCreated();
       onClose();
     } catch (error) {
       console.error("Post failed", error);
@@ -70,32 +76,32 @@ export default function CreatePost({ onClose, onPostCreated }) {
             <span className="text-sm font-medium">Click to upload photo</span>
           </div>
         )}
-        <input 
-          type="file" 
-          accept="image/*" 
+        <input
+          type="file"
+          accept="image/*"
           onChange={handleImageChange}
           className="absolute inset-0 opacity-0 cursor-pointer"
         />
       </div>
 
-      <textarea 
-        placeholder="Write a caption..." 
-        value={caption} 
-        onChange={(e) => setCaption(e.target.value)} 
+      <textarea
+        placeholder="Write a caption..."
+        value={caption}
+        onChange={(e) => setCaption(e.target.value)}
         className="w-full border-gray-200 bg-gray-50 border p-3 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm"
         rows="3"
       />
 
       <div className="flex gap-3 justify-end pt-2">
-        <button 
-          type="button" 
-          onClick={onClose} 
+        <button
+          type="button"
+          onClick={onClose}
           className="px-5 py-2 text-gray-600 font-medium text-sm hover:bg-gray-100 rounded-full transition"
         >
           Cancel
         </button>
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={loading}
           className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-full text-sm disabled:opacity-50 transition shadow-sm"
         >

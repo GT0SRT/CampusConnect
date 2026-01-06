@@ -14,11 +14,11 @@ export const createUserProfile = async (uid, email, formData, profilePicUrl) => 
       uid: uid,
       email: email,
       name: formData.name,
-      bio: formData.bio || "",  
+      bio: formData.bio || "",
       campus: formData.campus,
       batch: formData.batch,
       branch: formData.branch,
-      profile_pic: profilePicUrl || "https://via.placeholder.com/150",
+      profile_pic: profilePicUrl || "https://ui-avatars.com/api/?name=User&background=random",
       postsCount: 0,
       threadsCount: 0,
       karmaCount: 0,
@@ -55,7 +55,7 @@ export const updateUserProfile = async (uid, updateData) => {
     // updateDoc only updates the fields passed to it, leaving Karma/Posts intact
     await updateDoc(userRef, {
       ...updateData,
-      updatedAt: serverTimestamp() 
+      updatedAt: serverTimestamp()
     });
   } catch (error) {
     console.error("Error updating profile:", error);

@@ -6,6 +6,7 @@ import Threads from "./pages/Threads";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import PrivateRoute from "./components/PrivateRoute";
+import ThreadView from "./pages/ThreadView";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/threads" element={<Threads />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/threads/:thread_id" element={<ThreadView />} />
       </Route>
     </Routes>
   );
