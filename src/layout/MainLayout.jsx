@@ -3,9 +3,24 @@ import Sidebar from "./Sidebar";
 import RightPanel from "./RightPannel";
 import MobileNav from "./MobileNav";
 import { Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { useUserStore } from "../store/useUserStore";
 
 function MainLayout() {
+   const theme = useUserStore((state) => state.theme);
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+      document.body.style.backgroundColor = '#111827';
+    } else {
+      document.documentElement.classList.remove("dark");
+       document.body.style.backgroundColor = '';
+    }
+  }, [theme]);
+
   return (
+     <div className={theme === 'dark' ? 'dark' : ''}>
     <div className="h-screen flex flex-col">
       <Navbar />
 
@@ -24,6 +39,7 @@ function MainLayout() {
       </div>
 
       <MobileNav />
+    </div>
     </div>
   );
 }

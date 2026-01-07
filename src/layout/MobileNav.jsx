@@ -8,7 +8,7 @@ const Item = ({ to, label, icon }) => (
     to={to}
     className={({ isActive }) =>
       `flex flex-col items-center text-xs ${
-        isActive ? "text-blue-600" : "text-gray-500"
+        isActive ? "text-blue-600 " : "text-gray-500"
       }`
     }
   >
