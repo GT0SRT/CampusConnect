@@ -123,6 +123,14 @@ export default function Profile() {
     return () => unsubscribe();
   }, [navigate, setUser]);
 
+  // useEffect(() => {
+  //   if (theme === "dark") {
+  //     document.documentElement.classList.add("dark");
+  //   } else {
+  //     document.documentElement.classList.remove("dark");
+  //   }
+  // }, [theme]);
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -136,7 +144,11 @@ export default function Profile() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-20">
+    <div
+      className={`min-h-screen space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-20 ${
+        theme === "dark" ? "bg-gray-900" : "bg-gray-50"
+      }`}
+    >
       {/* Header */}
       <div className="bg-white rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 relative shadow-sm border border-gray-100">
         {/* Edit Button */}
