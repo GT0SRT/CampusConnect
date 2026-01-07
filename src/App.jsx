@@ -19,6 +19,7 @@ function App() {
       document.body.style.backgroundColor = '#111827';
     } else {
       document.documentElement.classList.remove('dark');
+      document.body.style.backgroundColor = '';
     }
   }, [theme]);
 
