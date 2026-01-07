@@ -70,16 +70,6 @@ export default function Settings() {
   const toggleTheme = useUserStore((state) => state.toggleTheme);
   const [privateAccount, setPrivateAccount] = useState(false);
 
-  const isDark = theme === 'dark';
-
-  // Apply theme to document
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
 
   return (
     <div className={`min-h-screen p-6 transition-colors ${

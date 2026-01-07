@@ -84,7 +84,7 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
     return (
       <div
         onClick={handleCardClick}
-        className="bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-400 hover:shadow-md transition cursor-pointer"
+        className="bg-white  rounded-lg border border-gray-200  p-4 hover:border-blue-400  hover:shadow-md transition cursor-pointer"
       >
         <div className="flex items-start gap-4">
           {/* Vote column */}
@@ -97,13 +97,13 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
             >
               <ChevronUp size={18} />
             </button>
-            <span className="text-sm font-semibold text-gray-800 min-w-6 text-center">
+            <span className="text-sm font-semiboldtext-gray-800  min-w-6 text-center">
               {voteDisplay}
             </span>
             <button
               onClick={(e) => handleVote("down", e)}
               disabled={votingDown}
-              className="text-gray-600 hover:text-red-600 transition disabled:opacity-50"
+              className="text-gray-600  hover:text-red-600  transition disabled:opacity-50"
               title="Downvote"
             >
               <ChevronDown size={18} />
@@ -114,8 +114,8 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">{thread.title}</h3>
-                <p className="text-xs text-gray-500 truncate">
+                <h3 className="text-lg font-bold text-gray-900  mb-2 line-clamp-2 leading-tight">{thread.title}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                   {authorName} • {thread.branch} • {thread.campus} • {thread.batch}
                 </p>
               </div>
@@ -125,18 +125,18 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
                   e.stopPropagation();
                   await handleSaveThread();
                 }}
-                className={`p-2 rounded-full border transition ${isSaved ? "bg-yellow-50 text-yellow-600 border-yellow-200" : "bg-white text-gray-500 hover:bg-gray-50 border-gray-200"}`}
+                className={`p-2 rounded-full border transition ${isSaved ? "bg-yellow-50  text-yellow-600  border-yellow-200 " : "bg-white  text-gray-500  hover:bg-gray-50  border-gray-200 "}`}
                 title={isSaved ? "Unsave" : "Save"}
               >
                 <Bookmark size={16} className={isSaved ? "fill-current" : ""} />
               </button>
             </div>
             <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center gap-1.5 bg-blue-50 rounded-full px-2.5 py-1 shrink-0">
-                <MessageCircle size={14} className="text-blue-600" />
-                <span className="text-xs font-semibold text-blue-600">{discussionCount}</span>
+              <div className="flex items-center gap-1.5  bg-blue-50 rounded-full px-2.5 py-1 shrink-0">
+                <MessageCircle size={14} className="text-blue-600 " />
+                <span className="text-xs font-semibold text-blue-600 ">{discussionCount}</span>
               </div>
-              <span className="text-[11px] text-gray-500 ml-auto">{thread.createdAt?.toDate ? new Date(thread.createdAt.toDate()).toLocaleDateString() : "Recently"}</span>
+              <span className="text-[11px] text-gray-500  ml-auto">{thread.createdAt?.toDate ? new Date(thread.createdAt.toDate()).toLocaleDateString() : "Recently"}</span>
             </div>
           </div>
         </div>
@@ -246,3 +246,9 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
     </div>
   );
 }
+
+
+
+
+
+

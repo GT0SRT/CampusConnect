@@ -150,12 +150,11 @@ export default function Profile() {
       }`}
     >
       {/* Header */}
-      <div className="bg-white rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 relative shadow-sm border border-gray-100">
+      <div className="bg-white  rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 relative shadow-sm border border-gray-100 ">
         {/* Edit Button */}
         <button
           onClick={() => setIsEditing((prev) => !prev)}
-          className="absolute top-4 right-4 text-xs bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-full font-medium transition text-gray-600"
-        >
+          className="absolute top-4 right-4 text-xs bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-full font-medium transition text-gray-600">
           {isEditing ? "Cancel" : "Edit Profile"}
         </button>
 
@@ -168,17 +167,17 @@ export default function Profile() {
             )}&background=random&size=150`
           }
           alt="Profile"
-          className="w-24 h-24 rounded-full object-cover bg-gray-200 border-4 border-white shadow-sm"
-        />
+        className="w-24 h-24 rounded-full object-cover bg-gray-200 border-4 border-white shadow-sm"
+/>
 
         {/* User Details */}
-        <div className="flex-1 text-center md:text-left">
-          <h2 className="text-xl font-bold text-gray-800">{user.name}</h2>
-          <p className="text-sm text-gray-500 mt-1">
+        <div className="flex-1 text-center md:text-left ">
+          <h2 className="text-xl font-bold text-gray-800 ">{user.name}</h2>
+          <p className="text-sm text-gray-500  mt-1">
             {user.campus || "No Campus"} · {user.branch || "General"} ·{" "}
             {user.batch || "202X"}
           </p>
-          <p className="text-sm text-gray-600 mt-3 italic max-w-md">
+          <p className="text-sm text-gray-600  mt-3 italic max-w-md">
             {user.bio || "No bio yet."}
           </p>
 
@@ -345,7 +344,7 @@ export default function Profile() {
       {active === "Saved" && (
         <div>
           {/* Filter Buttons */}
-          <div className="flex gap-3 mb-6">
+          <div className="flex gap-3 mb-6 ">
             <button
               onClick={() => setSavedFilter("posts")}
               className={`px-6 py-2 rounded-xl font-semibold transition-all ${
@@ -358,7 +357,7 @@ export default function Profile() {
             </button>
             <button
               onClick={() => setSavedFilter("threads")}
-              className={`px-6 py-2 rounded-xl font-semibold transition-all ${
+              className={`px-6 py-2 rounded-xl font-semibold transition-all${
                 savedFilter === "threads"
                   ? "bg-blue-600 text-white shadow"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"

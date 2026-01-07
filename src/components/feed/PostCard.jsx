@@ -91,18 +91,18 @@ export default function PostCard({ post, onPostDeleted }) {
     : "Just now";
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm mb-4">
+    <div className="bg-white rounded-xl  overflow-hidden border border-gray-100  shadow-sm mb-4">
 
       {/* Header */}
       <div className="p-4 flex items-center gap-3 relative">
         <img
           src={post.author?.profile_pic || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || "User")}&background=random&size=40`}
           alt={post.author?.name}
-          className="w-10 h-10 rounded-full object-cover bg-gray-200 border border-gray-100"
+          className="w-10 h-10 rounded-full object-cover bg-gray-200  border border-gray-100"
         />
         <div className="flex-1">
-          <p className="font-semibold text-sm text-gray-900">{post.author?.name || "Anonymous"}</p>
-          <p className="text-xs text-gray-500 font-medium">
+          <p className="font-semibold text-sm text-gray-900 ">{post.author?.name || "Anonymous"}</p>
+          <p className="text-xs text-gray-500  font-medium">
             {post.author?.campus || "General"} · {timeAgo}
           </p>
         </div>
@@ -111,7 +111,7 @@ export default function PostCard({ post, onPostDeleted }) {
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-50 transition"
+            className="text-gray-400  hover:text-gray-600 p-1 rounded-full hover:bg-gray-50 transition"
           >
             <MoreVertical size={20} />
           </button>
@@ -123,14 +123,14 @@ export default function PostCard({ post, onPostDeleted }) {
                 <button
                   onClick={handleDeletePost}
                   disabled={isDeleting}
-                  className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-lg transition disabled:opacity-50"
+                  className="w-full px-4 py-2 text-left text-red-600  hover:bg-red-50  flex items-center gap-2 rounded-lg transition disabled:opacity-50"
                 >
                   <Trash2 size={16} />
                   Delete
                 </button>
               )}
               {user?.uid !== post.uid && (
-                <button className="w-full px-4 py-2 text-left text-gray-600 hover:bg-gray-50 text-sm">
+                <button className="w-full px-4 py-2 text-left text-gray-600  hover:bg-gray-50  text-sm">
                   Report Post
                 </button>
               )}
@@ -141,7 +141,7 @@ export default function PostCard({ post, onPostDeleted }) {
 
       {/* Image */}
       {post.imageUrl && (
-        <div className="bg-gray-50 w-full flex justify-center">
+        <div className="bg-gray-50  w-full flex justify-center">
           <img
             src={post.imageUrl}
             alt="Post content"
@@ -153,7 +153,7 @@ export default function PostCard({ post, onPostDeleted }) {
 
       {/* Actions */}
       <div className="p-4 space-y-3">
-        <div className="flex items-center justify-between text-gray-600">
+        <div className="flex items-center justify-between text-gray-600 ">
           <div className='flex gap-6'>
             {/* LIKE BUTTON */}
             <div className='flex flex-col items-center justify-center'>
@@ -170,7 +170,7 @@ export default function PostCard({ post, onPostDeleted }) {
             <div className='flex flex-col items-center justify-center'>
               <button
                 onClick={() => setShowCommentsModal(true)}
-                className="hover:text-blue-500 transition"
+                className="hover:text-blue-500  transition"
               >
                 <MessageCircle className="w-6 h-6" />
               </button>
@@ -178,25 +178,25 @@ export default function PostCard({ post, onPostDeleted }) {
             </div>
 
             {/* SHARE */}
-            <button className="hover:text-green-500 mb-auto transition"><Share2 className="w-6 h-6" /></button>
+            <button className="hover:text-green-500  mb-auto transition"><Share2 className="w-6 h-6" /></button>
           </div>
 
           {/* BOOKMARK */}
           <button
             onClick={handleBookmark}
-            className={`hover:text-yellow-500 transition ${isSaved ? "text-yellow-500" : ""}`}
+            className={`hover:text-yellow-500  transition ${isSaved ? "text-yellow-500" : ""}`}
           >
             <Bookmark className={`w-6 h-6 ${isSaved ? "fill-current" : ""}`} />
           </button>
         </div>
 
         {/* Likes Count */}
-        <p className="text-sm font-bold text-gray-900">{likesCount} likes</p>
+        <p className="text-sm font-bold text-gray-900  ">{likesCount} likes</p>
 
         {/* Caption */}
         {post.caption && (
-          <p className="text-sm text-gray-800 leading-relaxed">
-            <span className="font-semibold mr-2">{post.author?.name}</span>
+          <p className="text-sm text-gray-800  leading-relaxed">
+            <span className="font-semibold mr-2 ">{post.author?.name}</span>
             {post.caption}
           </p>
         )}
@@ -205,7 +205,7 @@ export default function PostCard({ post, onPostDeleted }) {
         {post.tags && post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {post.tags.map(tag => (
-              <span key={tag} className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-medium">
+              <span key={tag} className="text-xs bg-blue-50 text-blue-600  px-2.5 py-1 rounded-full font-medium">
                 #{tag}
               </span>
             ))}
@@ -214,18 +214,18 @@ export default function PostCard({ post, onPostDeleted }) {
 
         {/* Comment Input Box (Hidden by default) */}
         {showCommentInput && (
-          <form onSubmit={handleCommentSubmit} className="flex gap-2 items-center mt-3 pt-3 border-t border-gray-100">
+          <form onSubmit={handleCommentSubmit} className="flex gap-2 items-center mt-3 pt-3 border-t border-gray-100 ">
             <input
               type="text"
               placeholder="Add a comment..."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              className="flex-1 text-sm bg-gray-50 border-none rounded-full px-4 py-2 focus:ring-1 focus:ring-blue-500 outline-none"
+              className="flex-1 text-sm bg-gray-50  dark:text-white border-none rounded-full px-4 py-2 focus:ring-1 focus:ring-blue-500 outline-none placeholder:text-gray-400 "
             />
             <button
               type="submit"
               disabled={!commentText.trim()}
-              className="text-blue-600 disabled:text-blue-300 font-semibold text-sm p-2"
+              className="text-blue-600   disabled:text-blue-300 font-semibold text-sm p-2"
             >
               Post
             </button>
