@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Heart, MessageCircle, Share2, Bookmark, Send, Trash2, MoreVertical } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { memo } from 'react';
 import { getAuth } from 'firebase/auth';
 import { toggleBookmark, toggleLike, addComment } from '../../services/interactionService';
 import { deletePost } from '../../services/postService';
@@ -8,7 +9,7 @@ import { useUserStore } from '../../store/useUserStore';
 import CommentsModal from '../modals/CommentsModal';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 
-export default function PostCard({ post, onPostDeleted, isPriority = false }) {
+function PostCard({ post, onPostDeleted, isPriority = false }) {
   const auth = getAuth();
   const user = auth.currentUser;
   const { user: userData, updateUser } = useUserStore();
@@ -263,3 +264,5 @@ export default function PostCard({ post, onPostDeleted, isPriority = false }) {
     </div>
   );
 }
+
+export default memo(PostCard);

@@ -3,24 +3,26 @@ import Sidebar from "./Sidebar";
 import RightPanel from "./RightPannel";
 import MobileNav from "./MobileNav";
 import { Outlet } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useUserStore } from "../store/useUserStore";
 
 function MainLayout() {
   const theme = useUserStore((state) => state.theme);
 
+  const isDark = useMemo(() => theme === "dark", [theme]);
+
   useEffect(() => {
-    if (theme === "dark") {
+    if (isDark) {
       document.documentElement.classList.add("dark");
       document.body.style.backgroundColor = '#111827';
     } else {
       document.documentElement.classList.remove("dark");
       document.body.style.backgroundColor = '';
     }
-  }, [theme]);
+  }, [isDark]);
 
   return (
-    <div className={theme === 'dark' ? 'dark' : ''}>
+    <div className={isDark ? 'dark' : ''}>
       <div className="h-screen flex flex-col">
         <Navbar />
 

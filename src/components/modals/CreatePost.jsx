@@ -108,9 +108,9 @@ export default function CreatePost({ onClose, onPostCreated }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 mt-4 text-gray-900 ">
+    <form onSubmit={handleSubmit} className={`space-y-4 mt-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
       {/* Image Preview Area */}
-      <div className="border-2 border-dashed border-gray-300  rounded-xl bg-gray-50  text-center cursor-pointer hover:bg-gray-100  transition relative h-52 flex items-center justify-center overflow-hidden">
+      <div className={`border-2 border-dashed rounded-xl text-center cursor-pointer transition relative h-52 flex items-center justify-center overflow-hidden ${theme === 'dark' ? 'border-gray-600 bg-gray-700 hover:bg-gray-600' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
         {previewUrl ? (
           <img
             src={previewUrl}
@@ -118,7 +118,7 @@ export default function CreatePost({ onClose, onPostCreated }) {
             className="h-full w-full object-contain"
           />
         ) : (
-          <div className="text-gray-400 flex flex-col items-center gap-2">
+          <div className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-400'} flex flex-col items-center gap-2`}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -133,7 +133,7 @@ export default function CreatePost({ onClose, onPostCreated }) {
                 d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
               />
             </svg>
-            <span className="text-sm font-medium ">
+            <span className="text-sm font-medium">
               Click to upload photo
             </span>
           </div>
@@ -158,8 +158,8 @@ export default function CreatePost({ onClose, onPostCreated }) {
               className={
                 `px-1 rounded-xl text-xs border transition ` +
                 (selectedStyle === style
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200")
+                  ? `${theme === 'dark' ? 'bg-blue-500 text-white border-blue-500' : 'bg-blue-600 text-white border-blue-600'}`
+                  : `${theme === 'dark' ? 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'}`)
               }
               aria-pressed={selectedStyle === style}
             >
@@ -172,7 +172,7 @@ export default function CreatePost({ onClose, onPostCreated }) {
             type="button"
             onClick={handleGenerateCaption}
             disabled={aiLoading || !imageFile}
-            className="px-4 py-2 rounded-full text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+            className={`px-4 py-2 rounded-full text-sm font-medium text-white disabled:opacity-50 ${theme === 'dark' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-blue-600 hover:bg-blue-700'}`}
           >
             {aiLoading ? "Generating…" : "Generate"}
           </button>
@@ -185,7 +185,7 @@ export default function CreatePost({ onClose, onPostCreated }) {
         value={caption}
         onChange={(e) => setCaption(e.target.value)}
         rows="3"
-        className="w-full border-gray-200 bg-gray-50   border p-3 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
+        className={`w-full border p-3 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-sm ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400'}`}
       />
 
       {/* Buttons */}
@@ -193,7 +193,7 @@ export default function CreatePost({ onClose, onPostCreated }) {
         <button
           type="button"
           onClick={onClose}
-          className="px-5 py-2 text-gray-600 font-medium text-sm hover:bg-gray-100  rounded-full transition"
+          className={`px-5 py-2 font-medium text-sm rounded-full transition ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
         >
           Cancel
         </button>
@@ -201,7 +201,7 @@ export default function CreatePost({ onClose, onPostCreated }) {
         <button
           type="submit"
           disabled={loading}
-          className="px-6 py-2 bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-full text-sm disabled:opacity-50 transition shadow-sm"
+          className={`px-6 py-2 text-white font-medium rounded-full text-sm disabled:opacity-50 transition shadow-sm ${theme === 'dark' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-blue-600 hover:bg-blue-700'}`}
         >
           {loading ? "Posting..." : "Share Post"}
         </button>

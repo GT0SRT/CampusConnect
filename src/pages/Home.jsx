@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import CreateModal from "../components/modals/CreateModal";
 import FeedTabs from "../components/feed/FeedTabs";
 import PostCard from "../components/feed/PostCard";
@@ -18,7 +18,7 @@ export default function Home() {
   const { user } = useUserStore();
 
   // Fetch posts on load
-  const fetchFeed = async () => {
+  const fetchFeed = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getAllPosts();
@@ -28,7 +28,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchFeed();
@@ -39,50 +39,50 @@ export default function Home() {
     setVisibleCount(5);
   }, [activeTab, posts]);
 
-  const filteredPosts = posts.filter((post) => {
-    if (activeTab === "Global") return true;
+  const filteredPosts = useMemo(() => {
+    return posts.filter((post) => {
+      if (activeTab === "Global") return true;
 
-    if (!user) return false;
+      if (!user) return false;
 
-    if (activeTab === "Campus") {
-      return post.campus?.toLowerCase() === user.campus?.toLowerCase();
-    }
+      if (activeTab === "Campus") {
+        return post.campus?.toLowerCase() === user.campus?.toLowerCase();
+      }
 
-    if (activeTab === "Branch") {
-      return post.branch?.toLowerCase() === user.branch?.toLowerCase();
-    }
+      if (activeTab === "Branch") {
+        return post.branch?.toLowerCase() === user.branch?.toLowerCase();
+      }
 
-    if (activeTab === "Batch") {
-      return post.batch === user.batch;
-    }
+      if (activeTab === "Batch") {
+        return post.batch === user.batch;
+      }
 
-    return true;
-  });
+      return true;
+    });
+  }, [posts, activeTab, user]);
 
   // IntersectionObserver to progressively reveal next 5 items when scrolled to bottom
   useEffect(() => {
     if (!containerRef.current || !bottomRef.current) return;
 
     const rootEl = containerRef.current;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !loading && !loadingMore) {
-            if (visibleCount < filteredPosts.length) {
-              setLoadingMore(true);
-              // Simulate async chunk loading; update count
-              setVisibleCount((prev) => Math.min(prev + 5, filteredPosts.length));
-              setLoadingMore(false);
-            }
+    const handleIntersection = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && !loading && !loadingMore) {
+          if (visibleCount < filteredPosts.length) {
+            setLoadingMore(true);
+            setVisibleCount((prev) => Math.min(prev + 5, filteredPosts.length));
+            setLoadingMore(false);
           }
-        });
-      },
-      {
-        root: rootEl,
-        rootMargin: "0px",
-        threshold: 1.0,
-      }
-    );
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(handleIntersection, {
+      root: rootEl,
+      rootMargin: "0px",
+      threshold: 1.0,
+    });
 
     observer.observe(bottomRef.current);
     return () => observer.disconnect();

@@ -10,8 +10,7 @@ load_dotenv()
 
 app = FastAPI()
 
-# CORS Configuration - Load from environment or use defaults
-cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,*").split(",")
+cors_origins = os.getenv("CORS_ORIGINS", "http://campusnet.vercel.app").split(",")
 
 app.add_middleware(
     CORSMiddleware,

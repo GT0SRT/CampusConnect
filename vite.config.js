@@ -22,4 +22,26 @@ export default defineConfig({
   server: {
     host: true,
   },
+  build: {
+    // Enable minification and code splitting
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log in production
+        drop_debugger: true
+      }
+    },
+    // Optimize chunks for better caching
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['lucide-react', 'tailwindcss']
+        }
+      }
+    },
+    // Increase chunk size warning threshold
+    chunkSizeWarningLimit: 1000
+  }
 })

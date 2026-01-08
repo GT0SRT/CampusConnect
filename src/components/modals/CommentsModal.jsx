@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { getComments, addComment, addReply } from "../../services/interactionService";
 import { useUserStore } from "../../store/useUserStore";
 import { X, Send } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-export default function CommentsModal({ postId, onClose }) {
+function CommentsModal({ postId, onClose }) {
   const { user } = useUserStore();
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
@@ -221,3 +221,5 @@ export default function CommentsModal({ postId, onClose }) {
     </div>
   );
 }
+
+export default memo(CommentsModal);

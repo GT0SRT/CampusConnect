@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useUserStore } from "../../store/useUserStore";
 import { updateUserProfile } from "../../services/userService";
 import { X } from "lucide-react";
 
 export default function EditProfileModal({ user, onClose, onUpdate }) {
   const [loading, setLoading] = useState(false);
+  const theme = useUserStore((state) => state.theme);
   const [formData, setFormData] = useState({
     name: user.name || "",
     bio: user.bio || "",
@@ -82,30 +84,30 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl [&::-webkit-scrollbar]:hidden animate-in zoom-in-95 duration-200">
+      <div className={`${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-100'} rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl [&::-webkit-scrollbar]:hidden animate-in zoom-in-95 duration-200`}>
 
         {/* Header with gradient */}
         <div className=" top-0 p-6 rounded-t-2xl">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Edit Profile</h2>
+            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : ''}`}>Edit Profile</h2>
             <button
               type="button"
               onClick={onClose}
-              className=" hover:bg-white/20 rounded-full p-2 transition"
+              className={`${theme === 'dark' ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-white/20'} rounded-full p-2 transition`}
             ><X />
             </button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className={`p-6 space-y-6 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
           {/* Profile Photo Section */}
-          <div className="flex flex-col items-center gap-4 py-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6">
+          <div className={`flex flex-col items-center gap-4 py-4 rounded-xl p-6 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gradient-to-br from-blue-50 to-purple-50'}`}>
             <div className="relative group">
-              <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-br from-blue-100 to-purple-100 border-4 border-white shadow-lg ring-2 ring-blue-200">
+              <div className={`w-32 h-32 rounded-full overflow-hidden border-4 shadow-lg ring-2 ${theme === 'dark' ? 'bg-gray-600 border-gray-800 ring-gray-500' : 'bg-gradient-to-br from-blue-100 to-purple-100 border-white ring-blue-200'}`}>
                 {previewUrl ? (
                   <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                  <div className={`w-full h-full flex flex-col items-center justify-center ${theme === 'dark' ? 'text-gray-300' : 'text-gray-400'}`}>
                     <svg className="w-12 h-12 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -131,7 +133,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
               <button
                 type="button"
                 onClick={handleRemovePhoto}
-                className="text-sm text-red-600 hover:text-red-700 font-medium hover:underline transition"
+                className={`text-sm font-medium hover:underline transition ${theme === 'dark' ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'}`}
               >
                 Remove Photo
               </button>
@@ -140,7 +142,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
 
           {/* Name Field */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <label className={`flex items-center gap-2 text-sm font-semibold ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
               <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
@@ -151,7 +153,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
               placeholder="Enter your full name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full border-2 border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition bg-gray-50 hover:bg-white"
+              className={`w-full border-2 p-3 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-white placeholder:text-gray-500'}`}
               required
             />
           </div>
@@ -160,7 +162,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
           <div className="grid md:grid-cols-2 gap-4">
             {/* Campus */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <label className={`flex items-center gap-2 text-sm font-semibold ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
                 <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
@@ -171,14 +173,14 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
                 placeholder="e.g., Mumbai, Delhi"
                 value={formData.campus}
                 onChange={handleChange}
-                className="w-full border-2 border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition bg-gray-50 hover:bg-white"
+                className={`w-full border-2 p-3 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-white placeholder:text-gray-500'}`}
                 required
               />
             </div>
 
             {/* Branch */}
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <label className={`flex items-center gap-2 text-sm font-semibold ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
                 <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
@@ -189,7 +191,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
                 placeholder="e.g., CSE, ECE, ME"
                 value={formData.branch}
                 onChange={handleChange}
-                className="w-full border-2 border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition bg-gray-50 hover:bg-white"
+                className={`w-full border-2 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-white placeholder:text-gray-500'}`}
                 required
               />
             </div>
@@ -197,7 +199,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
 
           {/* Batch Field */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <label className={`flex items-center gap-2 text-sm font-semibold ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
               <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -208,14 +210,14 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
               placeholder="e.g., 2024, 2025, 2026"
               value={formData.batch}
               onChange={handleChange}
-              className="w-full border-2 border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition bg-gray-50 hover:bg-white"
+              className={`w-full border-2 p-3 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-white placeholder:text-gray-500'}`}
               required
             />
           </div>
 
           {/* Bio Field */}
           <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <label className={`flex items-center gap-2 text-sm font-semibold ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
               <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
@@ -226,12 +228,12 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
               placeholder="Tell something about yourself..."
               value={formData.bio}
               onChange={handleChange}
-              className="w-full border-2 border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition resize-none bg-gray-50 hover:bg-white"
+              className={`w-full border-2 p-3 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition resize-none ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-white placeholder:text-gray-500'}`}
               rows="4"
             />
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 bg-blue-50 p-3 rounded-lg border border-blue-100">
+          <div className={`flex items-center gap-1.5 text-xs p-3 rounded-lg border ${theme === 'dark' ? 'text-gray-300 bg-gray-700 border-gray-600' : 'text-gray-500 bg-blue-50 border-blue-100'}`}>
             <svg className="w-4 h-4 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -239,18 +241,18 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 pt-4 border-t">
+          <div className={`flex gap-3 pt-4 ${theme === 'dark' ? 'border-t border-gray-700' : 'border-t border-gray-200'}`}>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl font-semibold transition"
+              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${theme === 'dark' ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'}`}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-blue-500/30"
+              className={`flex-1 px-6 py-3 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 shadow-blue-500/20' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-blue-500/30'}`}
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
