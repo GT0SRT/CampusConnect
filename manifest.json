@@ -1,0 +1,13 @@
+{
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/*",
+        "locales/*",      
+        "*.png", 
+        "*.json"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

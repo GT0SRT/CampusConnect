@@ -23,8 +23,7 @@ const tabs = ["Posts", "Threads", "Saved", "Settings"];
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, setUser, updateUser, clearUser, theme, toggleTheme } =
-    useUserStore();
+  const { user, setUser, updateUser, clearUser, theme, toggleTheme } =useUserStore();
   const [active, setActive] = useState("Posts");
   const [isEditing, setIsEditing] = useState(false);
   const [myPosts, setMyPosts] = useState([]);

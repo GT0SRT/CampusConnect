@@ -72,8 +72,13 @@ const Auth = () => {
           navigate('/', { replace: true });
         }
       } catch (err) {
-        // Common errors: popup/redirect blocked, cookies disabled
-        console.warn('Google Redirect handling error:', err);
+        // Common errors: popup/redirect blocked, cookies disabled, user cancelled
+        if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+          console.log('User cancelled sign-in');
+        } else {
+          console.error('Google Redirect Error:', err.code, err.message);
+          setError(`Sign-in failed: ${err.message}`);
+        }
       }
     })();
   }, [navigate, setUser]);
@@ -122,12 +127,25 @@ const Auth = () => {
     setError('');
     setIsLoading(true);
     try {
-      // Use redirect to avoid third-party cookie/popup issues
-      await signInWithRedirect(auth, googleProvider);
-      // Navigation will happen after redirect result is processed
+      const result = await signInWithPopup(auth, googleProvider);
+      if (result?.user) {
+        const userData = await ensureUserProfile(result.user.uid, result.user.email);
+        setUser(userData);
+        navigate('/', { replace: true });
+      }
     } catch (err) {
-      console.error('Google Sign-In Error:', err);
-      setError('Google Sign-In failed. Please try again.');
+      if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/popup-closed-by-user') {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+        } catch (redirectErr) {
+          console.error('Google Redirect Error:', redirectErr);
+          setError('Google Sign-In failed. Please try again.');
+        }
+      } else {
+        console.error('Google Sign-In Error:', err);
+        setError('Google Sign-In failed. Please try again.');
+      }
+    } finally {
       setIsLoading(false);
     }
   };

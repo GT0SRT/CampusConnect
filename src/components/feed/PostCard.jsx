@@ -162,7 +162,7 @@ export default function PostCard({ post, onPostDeleted, isPriority = false }) {
             height="500"
             className="w-full max-h-[500px] object-contain"
             loading={isPriority ? "eager" : "lazy"}
-            fetchpriority={isPriority ? "high" : "auto"}
+            fetchPriority={isPriority ? "high" : "auto"}
             decoding="async"
           />
         </div>

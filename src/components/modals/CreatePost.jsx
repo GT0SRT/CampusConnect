@@ -8,12 +8,57 @@ export default function CreatePost({ onClose, onPostCreated }) {
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [selectedStyle, setSelectedStyle] = useState("");
+  const theme = useUserStore((state) => state.theme);
+  const styles = ["concise", "professional", "funny", "friendly", "motivational", "sarcastic"];
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setImageFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        // Strip data URI header if present
+        const base64 = typeof result === "string" ? result.split(",")[1] || result : result;
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleGenerateCaption = async () => {
+    if (!imageFile) {
+      alert("Please select an image first to generate a caption.");
+      return;
+    }
+    try {
+      setAiLoading(true);
+      const base64 = await fileToBase64(imageFile);
+      const apiUrl = import.meta.env.VITE_CAPTION_API_URL || "http://localhost:8000/generate";
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64, instruction: selectedStyle })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.detail || "Failed to generate caption");
+      }
+      const data = await res.json();
+      setCaption(data.caption || "");
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Caption generation failed");
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -99,6 +144,38 @@ export default function CreatePost({ onClose, onPostCreated }) {
           onChange={handleImageChange}
           className="absolute inset-0 opacity-0 cursor-pointer"
         />
+      </div>
+
+      {/* AI Caption Tools */}
+      <div className="grid grid-cols-5">
+        <div className="col-span-4 flex overflow-x-auto [&::-webkit-scrollbar]:hidden gap-2">
+          {styles.map((style) => (
+            <button
+              key={style}
+              type="button"
+              onClick={() => setSelectedStyle(style)}
+              className={
+                `px-1 rounded-xl text-xs border transition ` +
+                (selectedStyle === style
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200")
+              }
+              aria-pressed={selectedStyle === style}
+            >
+              {style}
+            </button>
+          ))}
+        </div>
+        <div>
+          <button
+            type="button"
+            onClick={handleGenerateCaption}
+            disabled={aiLoading || !imageFile}
+            className="px-4 py-2 rounded-full text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+          >
+            {aiLoading ? "Generating…" : "Generate"}
+          </button>
+        </div>
       </div>
 
       {/* Caption */}
