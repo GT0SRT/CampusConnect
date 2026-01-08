@@ -5,6 +5,7 @@ import uvicorn
 import os
 from dotenv import load_dotenv
 from gemini_client import process_image_with_gemini
+from gemini_client import chatbot
 
 load_dotenv()
 
@@ -24,6 +25,9 @@ class ImageRequest(BaseModel):
     image: str
     instruction: str = "concise"
 
+class ChatRequest(BaseModel):
+    message: str
+
 @app.post("/generate")
 async def generate_endpoint(request: ImageRequest):
     try:
@@ -38,6 +42,22 @@ async def generate_endpoint(request: ImageRequest):
         return {
             "status": "success",
             "style_used": request.instruction,
+            "caption": result
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/chat")
+async def generate_endpoint(request: ChatRequest):
+    try:
+        if not request.message:
+            raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+        result = chatbot(request.message)
+
+        return {
+            "status": "success",
             "caption": result
         }
 

@@ -12,8 +12,8 @@ export default function FeedTabs({ activeTab, onTabChange }) {
           onClick={() => onTabChange(tab)}
           className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab
             ? "bg-white dark:bg-gray-800 shadow text-gray-900 dark:text-white"
-            : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-            }`}
+            : `${theme === "dark" ? "text-gray-300 hover:text-gray-100" : "text-gray-700 hover:text-gray-900"}`
+            } `}
         >
           {tab}
         </button>

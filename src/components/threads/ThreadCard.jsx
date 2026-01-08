@@ -151,9 +151,9 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
 
   // Detailed view
   return (
-    <div className={`${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-xl overflow-hidden`}>
+    <div className={`${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-xl overflow-hidden transition-colors`}>
       {/* Author Profile Section */}
-      <div className={`px-6 py-5 border-b relative ${theme === 'dark' ? 'border-gray-700 bg-gradient-to-r from-blue-900/20 to-purple-900/20' : 'border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50'}`}>
+      <div className={`px-6 py-5 border-b relative ${theme === 'dark' ? 'border-gray-700 bg-gradient-to-r from-blue-900/20 to-purple-900/20' : 'border-gray-200 bg-white'}`}>
         <div className="flex items-center gap-4">
           {authorPic && (
             <img
@@ -221,7 +221,7 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
         </div>
       </div>
       {/* Stats */}
-      <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-50 dark:from-gray-700 dark:to-gray-700 flex items-center justify-between">
+      <div className={`px-6 py-4 border-t  ${theme === 'dark' ? 'border-gray-700 bg-gradient-to-r from-gray-700 to-gray-700' : 'border-gray-200 bg-white'} flex items-center justify-between`}>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <MessageCircle size={18} className="text-blue-600" />

@@ -2,6 +2,7 @@ import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import RightPanel from "./RightPannel";
 import MobileNav from "./MobileNav";
+import GeminiBot from "../components/AI/GeminiBot";
 import { Outlet } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import { useUserStore } from "../store/useUserStore";
@@ -41,6 +42,7 @@ function MainLayout() {
         </div>
 
         <MobileNav />
+        <GeminiBot />
       </div>
     </div>
   );

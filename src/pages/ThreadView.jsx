@@ -438,9 +438,10 @@ function ThreadView() {
   const threadVoteDisplay = Number.isFinite(netThreadVotes) ? netThreadVotes : (thread.votes || 0);
 
   return (
-    <div className="max-w-4xl mx-auto pb-20 px-4 md:px-0">
+    <div className="max-w-4xl mx-auto pb-32 px-4 md:px-0">
       {/* Back Button */}
-      <Link to="/threads" className="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mb-4 mt-4 transition">
+      <Link to="/threads" className={`inline-flex items-center gap-2 mb-4 mt-4 transition
+        ${theme === 'dark' ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-800'}`}>
         <ArrowLeft size={18} />
         <span className="text-sm font-medium">Back to Threads</span>
       </Link>
@@ -489,16 +490,16 @@ function ThreadView() {
 
         {/* Description */}
         {thread.description && (
-          <div className="px-6 py-4 prose prose-sm max-w-none text-gray-700 dark:text-gray-300 [&_img]:max-h-96 [&_img]:rounded-lg">
+          <div className={`px-6 py-4 prose prose-sm max-w-none ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} [&_img]:max-h-96 [&_img]:rounded-lg`}>
             <div dangerouslySetInnerHTML={{ __html: thread.description }} />
           </div>
         )}
 
         {/* Stats and Actions */}
-        <div className={`px-6 py-4 flex items-center justify-between border-t bg-gray-50 dark:bg-gray-700 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
-          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className={`px-6 py-4 flex items-center justify-between border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
+          <div className={`flex items-center gap-4 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             <div className="flex items-center gap-1">
-              <MessageSquare size={18} className="text-blue-600 dark:text-blue-400" />
+              <MessageSquare size={18} className={`text-blue-600 ${theme === 'dark' ? 'dark:text-blue-400' : ''}`} />
               <span className="font-medium">{thread.Discussion?.length || 0} Answers</span>
             </div>
           </div>
@@ -637,16 +638,16 @@ function ThreadView() {
                   </div>
 
                   {/* Answer Content */}
-                  <div className="px-6 py-4 prose prose-sm max-w-none text-gray-700 dark:text-gray-300 [&_img]:max-h-96 [&_img]:rounded-lg">
+                  <div className={`px-6 py-4 prose prose-sm max-w-none ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} [&_img]:max-h-96 [&_img]:rounded-lg`}>
                     <div dangerouslySetInnerHTML={{ __html: answer.content }} />
                   </div>
 
                   {/* Answer Actions */}
-                  <div className="px-6 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                  <div className={`px-6 py-3 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'} ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'} flex items-center justify-between`}>
+                    <div className={`flex items-center gap-3 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
                       <button
                         onClick={() => setOpenReplies(prev => ({ ...prev, [answer.id]: !prev[answer.id] }))}
-                        className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                        className={`text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition`}
                       >
                         {openReplies[answer.id] ? "Hide replies" : `View replies (${countReplies(answer.replies) || 0})`}
                       </button>
@@ -661,7 +662,7 @@ function ThreadView() {
                           setReplyContent("");
                           setOpenReplies(prev => ({ ...prev, [answer.id]: true }));
                         }}
-                        className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                        className={`flex items-center gap-2 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'} hover:text-blue-600 dark:hover:text-blue-400 transition`}
                       >
                         <Reply size={16} />
                         Reply
@@ -671,16 +672,16 @@ function ThreadView() {
 
                   {/* Reply Form */}
                   {replyingTo?.answerId === answer.id && !replyingTo?.replyId && user && (
-                    <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-100 dark:border-gray-700">
+                    <div className={`px-6 py-4 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'} border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
                       <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
                           Reply to {answer.author?.name}
                         </label>
                         <textarea
                           value={replyContent}
                           onChange={(e) => setReplyContent(e.target.value)}
                           placeholder="Write your reply (plain text)..."
-                          className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white"
+                          className={`w-full px-4 py-3 border ${theme === 'dark' ? 'border-gray-600 bg-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm`}
                           rows="3"
                         />
                       </div>
@@ -688,7 +689,7 @@ function ThreadView() {
                         <button
                           onClick={() => handleSubmitReply(answer.id)}
                           disabled={submittingReply || !replyContent.trim()}
-                          className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                          className={`px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm`}
                         >
                           {submittingReply ? "Posting..." : "Post Reply"}
                         </button>
@@ -697,7 +698,7 @@ function ThreadView() {
                             setReplyingTo(null);
                             setReplyContent("");
                           }}
-                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm"
+                          className={`px-4 py-2 border ${theme === 'dark' ? 'border-gray-600 bg-gray-600 hover:bg-gray-600' : 'border-gray-300 bg-white hover:bg-gray-100'} rounded-lg font-medium transition text-sm`}
                         >
                           Cancel
                         </button>
@@ -707,7 +708,7 @@ function ThreadView() {
 
                   {/* Replies List */}
                   {openReplies[answer.id] && answer.replies && answer.replies.length > 0 && (
-                    <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-100 dark:border-gray-700">
+                    <div className={`px-6 py-4 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'} border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
                       <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-3 uppercase">
                         {countReplies(answer.replies)} {countReplies(answer.replies) === 1 ? "Reply" : "Replies"}
                       </p>

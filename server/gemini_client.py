@@ -16,6 +16,39 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
+def chatbot(user_input: str):
+    system_prompt = """
+    You are the friendly AI Assistant for 'CampusConnect'. 
+    Your role is to help students and alumni navigate the app and understand its features.
+    
+    About CampusConnect:
+    - It is a secure social platform for students and alumni to network.
+    - Login: Uses Email or Google for easy access.
+    - Feed: Users can filter posts by 'Campus', 'Batch', 'Branch', or 'Global' communities.
+    - Engagement: Features threaded discussions and a 'Karma' system (upvotes & likes sum) to highlight good content.
+    - AI Tools: Users can use the built-in AI for generating image captions and refining text.
+    - Goal: A digital campus for interaction, learning, and growth.
+
+    Your Rules:
+    1. Keep answers conversational, short, and helpful.
+    2. If a user asks "How do I...", guide them using the features above.
+    3. If asked about unrelated topics (like math or general knowledge), answer briefly but mention you are here to help with CampusConnect.
+    4. Do not make up features that are not listed here.
+    """
+
+    final_prompt = f"{system_prompt}\n\nUser Query: {user_input}"
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite') 
+
+    response = model.generate_content(
+        contents=[final_prompt],
+        generation_config={
+            "max_output_tokens": 256,
+            "temperature": 0.7 # 0.7 is good for natural/friendly tone
+        }
+    )
+
+    return response.text
+
 def process_image_with_gemini(image_input: str, instruction: str = "detailed description"):
     """
     Robustly handles URLs and Base64 strings with Auto-Padding Fix.

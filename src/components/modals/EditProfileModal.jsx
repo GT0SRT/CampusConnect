@@ -83,7 +83,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 mb-16 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-in fade-in duration-200">
       <div className={`${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-100'} rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl [&::-webkit-scrollbar]:hidden animate-in zoom-in-95 duration-200`}>
 
         {/* Header with gradient */}
