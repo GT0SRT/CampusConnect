@@ -10,12 +10,11 @@ load_dotenv()
 
 app = FastAPI()
 
-cors_origins = os.getenv("CORS_ORIGINS", "http://campusnet.vercel.app").split(",")
-
+# Allow all origins since we're just processing images - no credentials needed
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins for public API
+    allow_credentials=False,  # No credentials needed for image processing
     allow_methods=["*"],
     allow_headers=["*"],
 )
