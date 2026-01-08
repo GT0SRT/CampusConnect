@@ -6,11 +6,13 @@ import { toggleBookmark, toggleLike, addComment } from '../../services/interacti
 import { deletePost } from '../../services/postService';
 import { useUserStore } from '../../store/useUserStore';
 import CommentsModal from '../modals/CommentsModal';
+import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 
-export default function PostCard({ post, onPostDeleted }) {
+export default function PostCard({ post, onPostDeleted, isPriority = false }) {
   const auth = getAuth();
   const user = auth.currentUser;
   const { user: userData, updateUser } = useUserStore();
+  const theme = useUserStore((state) => state.theme);
   const [isLiked, setIsLiked] = useState(post.likedBy?.includes(user?.uid) || false);
   const [likesCount, setLikesCount] = useState(post.likes || 0);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
@@ -79,7 +81,7 @@ export default function PostCard({ post, onPostDeleted }) {
       await addComment(user.uid, post.id, commentText);
       setCommentText("");
       setShowCommentInput(false);
-      alert("Comment added!"); // Replace with toast notification later
+      alert("Comment added!");
     } catch (error) {
       console.error("Comment failed", error);
     }
@@ -91,18 +93,24 @@ export default function PostCard({ post, onPostDeleted }) {
     : "Just now";
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm mb-4">
+    <div className={`${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-100'} rounded-xl overflow-hidden shadow-sm mb-4`}>
 
       {/* Header */}
       <div className="p-4 flex items-center gap-3 relative">
         <img
-          src={post.author?.profile_pic || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || "User")}&background=random&size=40`}
-          alt={post.author?.name}
+          src={
+            post.author?.profile_pic
+              ? getOptimizedImageUrl(post.author.profile_pic.slice(0, -3) + "webp", 'profile-small')
+              : `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || "User")}&background=random&size=40`
+          }
+          alt={`${post.author?.name || "User"}'s profile picture`}
+          width="40"
+          height="40"
           className="w-10 h-10 rounded-full object-cover bg-gray-200 border border-gray-100"
         />
         <div className="flex-1">
-          <p className="font-semibold text-sm text-gray-900">{post.author?.name || "Anonymous"}</p>
-          <p className="text-xs text-gray-500 font-medium">
+          <p className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{post.author?.name || "Anonymous"}</p>
+          <p className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
             {post.author?.campus || "General"} · {timeAgo}
           </p>
         </div>
@@ -111,26 +119,26 @@ export default function PostCard({ post, onPostDeleted }) {
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-50 transition"
-          >
+            aria-label="Post options menu"
+            className="text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition">
             <MoreVertical size={20} />
           </button>
 
           {/* Dropdown Menu */}
           {showMenu && (
-            <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+            <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-50">
               {user?.uid === post.uid && (
                 <button
                   onClick={handleDeletePost}
                   disabled={isDeleting}
-                  className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-lg transition disabled:opacity-50"
+                  className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 rounded-lg transition disabled:opacity-50"
                 >
                   <Trash2 size={16} />
                   Delete
                 </button>
               )}
               {user?.uid !== post.uid && (
-                <button className="w-full px-4 py-2 text-left text-gray-600 hover:bg-gray-50 text-sm">
+                <button className="w-full px-4 py-2 text-left text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm">
                   Report Post
                 </button>
               )}
@@ -141,24 +149,34 @@ export default function PostCard({ post, onPostDeleted }) {
 
       {/* Image */}
       {post.imageUrl && (
-        <div className="bg-gray-50 w-full flex justify-center">
+        <div className="bg-gray-50 dark:bg-gray-700 w-full flex justify-center">
           <img
-            src={post.imageUrl}
-            alt="Post content"
+            src={getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'feed')}
+            srcSet={`
+              ${getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'feed')} 800w,
+              ${getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'post')} 1200w
+            `}
+            sizes="(max-width: 768px) 100vw, 800px"
+            alt={post.caption || `Post by ${post.author?.name || "User"}`}
+            width="600"
+            height="500"
             className="w-full max-h-[500px] object-contain"
-            loading="lazy"
+            loading={isPriority ? "eager" : "lazy"}
+            fetchpriority={isPriority ? "high" : "auto"}
+            decoding="async"
           />
         </div>
       )}
 
       {/* Actions */}
       <div className="p-4 space-y-3">
-        <div className="flex items-center justify-between text-gray-600">
+        <div className={`flex items-center justify-between ${theme === 'dark' ? 'text-gray-400' : 'text-black'}`}>
           <div className='flex gap-6'>
             {/* LIKE BUTTON */}
             <div className='flex flex-col items-center justify-center'>
               <button
                 onClick={handleLike}
+                aria-label={isLiked ? "Unlike post" : "Like post"}
                 className={`transition-transform active:scale-90 hover:text-red-500 ${isLiked ? "text-red-500" : ""}`}
               >
                 <Heart className={`w-6 h-6 ${isLiked ? "fill-current" : ""}`} />
@@ -170,6 +188,7 @@ export default function PostCard({ post, onPostDeleted }) {
             <div className='flex flex-col items-center justify-center'>
               <button
                 onClick={() => setShowCommentsModal(true)}
+                aria-label="View comments"
                 className="hover:text-blue-500 transition"
               >
                 <MessageCircle className="w-6 h-6" />
@@ -178,12 +197,13 @@ export default function PostCard({ post, onPostDeleted }) {
             </div>
 
             {/* SHARE */}
-            <button className="hover:text-green-500 mb-auto transition"><Share2 className="w-6 h-6" /></button>
+            <button aria-label="Share post" className="hover:text-green-500 mb-auto transition"><Share2 className="w-6 h-6" /></button>
           </div>
 
           {/* BOOKMARK */}
           <button
             onClick={handleBookmark}
+            aria-label={isSaved ? "Remove bookmark" : "Bookmark post"}
             className={`hover:text-yellow-500 transition ${isSaved ? "text-yellow-500" : ""}`}
           >
             <Bookmark className={`w-6 h-6 ${isSaved ? "fill-current" : ""}`} />
@@ -191,11 +211,11 @@ export default function PostCard({ post, onPostDeleted }) {
         </div>
 
         {/* Likes Count */}
-        <p className="text-sm font-bold text-gray-900">{likesCount} likes</p>
+        <p className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{likesCount} likes</p>
 
         {/* Caption */}
         {post.caption && (
-          <p className="text-sm text-gray-800 leading-relaxed">
+          <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-gray-200' : 'text-black'}`}>
             <span className="font-semibold mr-2">{post.author?.name}</span>
             {post.caption}
           </p>
@@ -205,7 +225,7 @@ export default function PostCard({ post, onPostDeleted }) {
         {post.tags && post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {post.tags.map(tag => (
-              <span key={tag} className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full font-medium">
+              <span key={tag} className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-full font-medium">
                 #{tag}
               </span>
             ))}
@@ -214,13 +234,13 @@ export default function PostCard({ post, onPostDeleted }) {
 
         {/* Comment Input Box (Hidden by default) */}
         {showCommentInput && (
-          <form onSubmit={handleCommentSubmit} className="flex gap-2 items-center mt-3 pt-3 border-t border-gray-100">
+          <form onSubmit={handleCommentSubmit} className="flex gap-2 items-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
             <input
               type="text"
               placeholder="Add a comment..."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              className="flex-1 text-sm bg-gray-50 border-none rounded-full px-4 py-2 focus:ring-1 focus:ring-blue-500 outline-none"
+              className="flex-1 text-sm bg-gray-50 dark:bg-gray-700 border-none rounded-full px-4 py-2 focus:ring-1 focus:ring-blue-500 outline-none placeholder:text-gray-400 dark:placeholder-gray-300 text-gray-900 dark:text-white"
             />
             <button
               type="submit"

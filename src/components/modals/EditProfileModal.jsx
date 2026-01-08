@@ -22,7 +22,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
     const file = e.target.files[0];
     if (file) {
       setImageFile(file);
-      setPreviewUrl(URL.createObjectURL(file)); // Show local preview
+      setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
@@ -34,7 +34,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
   const uploadToCloudinary = async () => {
     const data = new FormData();
     data.append("file", imageFile);
-    data.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET); // Secure env var
+    data.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET);
 
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
     const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
@@ -59,21 +59,17 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
     try {
       let profile_pic = previewUrl;
 
-      // 1. Upload Image to Cloudinary if a new one was selected
       if (imageFile) {
         profile_pic = await uploadToCloudinary();
       }
 
-      // 2. Prepare data for Firebase (excluding stats like karma)
       const updatedData = {
         ...formData,
         profile_pic,
       };
 
-      // 3. Update Firebase
       await updateUserProfile(user.uid, updatedData);
 
-      // 4. Update parent state and close
       onUpdate(updatedData);
       onClose();
     } catch (error) {

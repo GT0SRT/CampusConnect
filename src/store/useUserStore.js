@@ -1,11 +1,13 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// useUserStore with persist
 export const useUserStore = create(
   persist(
     (set) => ({
       user: null,
-      theme: 'light', // 'light' or 'dark'
+      theme: 'light',
 
       setUser: (userData) => set({ user: userData }),
 

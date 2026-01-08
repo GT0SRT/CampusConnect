@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import CreateModal from "../components/modals/CreateModal";
 import FeedTabs from "../components/feed/FeedTabs";
 import PostCard from "../components/feed/PostCard";
@@ -10,7 +10,11 @@ export default function Home() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Global");
-  
+  const [visibleCount, setVisibleCount] = useState(5);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const containerRef = useRef(null);
+  const bottomRef = useRef(null);
+
   const { user } = useUserStore();
 
   // Fetch posts on load
@@ -29,6 +33,11 @@ export default function Home() {
   useEffect(() => {
     fetchFeed();
   }, []);
+
+  // Reset visible items when tab or underlying posts change
+  useEffect(() => {
+    setVisibleCount(5);
+  }, [activeTab, posts]);
 
   const filteredPosts = posts.filter((post) => {
     if (activeTab === "Global") return true;
@@ -50,8 +59,37 @@ export default function Home() {
     return true;
   });
 
+  // IntersectionObserver to progressively reveal next 5 items when scrolled to bottom
+  useEffect(() => {
+    if (!containerRef.current || !bottomRef.current) return;
+
+    const rootEl = containerRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !loading && !loadingMore) {
+            if (visibleCount < filteredPosts.length) {
+              setLoadingMore(true);
+              // Simulate async chunk loading; update count
+              setVisibleCount((prev) => Math.min(prev + 5, filteredPosts.length));
+              setLoadingMore(false);
+            }
+          }
+        });
+      },
+      {
+        root: rootEl,
+        rootMargin: "0px",
+        threshold: 1.0,
+      }
+    );
+
+    observer.observe(bottomRef.current);
+    return () => observer.disconnect();
+  }, [loading, loadingMore, visibleCount, filteredPosts.length]);
+
   return (
-    <div className="space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-20">
+    <div ref={containerRef} className="space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-40">
       <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
       {/* Feed List */}
       <div className="space-y-6">
@@ -71,18 +109,18 @@ export default function Home() {
             </div>
           ))
         ) : filteredPosts.length > 0 ? (
-          filteredPosts.map((post) => (
+          filteredPosts.slice(0, visibleCount).map((post) => (
             <PostCard key={post.id} post={post} />
           ))
         ) : (
           <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-200">
             <p className="text-gray-500 font-medium">No posts found in {activeTab}</p>
             {activeTab !== "Global" && (
-               <p className="text-xs text-gray-400 mt-1">
-                 (Showing posts for {activeTab}: {user?.[activeTab.toLowerCase()] || "N/A"})
-               </p>
+              <p className="text-xs text-gray-400 mt-1">
+                (Showing posts for {activeTab}: {user?.[activeTab.toLowerCase()] || "N/A"})
+              </p>
             )}
-            <button 
+            <button
               onClick={() => setIsModalOpen(true)}
               className="mt-4 text-blue-600 text-sm font-semibold hover:underline"
             >
@@ -90,14 +128,22 @@ export default function Home() {
             </button>
           </div>
         )}
+
+        {/* Sentinel for progressive loading */}
+        <div ref={bottomRef} className="h-6" />
+        {loadingMore && (
+          <div className="flex items-center justify-center py-4">
+            <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+          </div>
+        )}
       </div>
 
       {/* Create Modal */}
       {isModalOpen && (
-        <CreateModal 
-          onClose={() => setIsModalOpen(false)} 
+        <CreateModal
+          onClose={() => setIsModalOpen(false)}
           onPostCreated={() => {
-            fetchFeed(); 
+            fetchFeed();
           }}
         />
       )}

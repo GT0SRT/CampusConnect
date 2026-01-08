@@ -3,27 +3,43 @@ import Sidebar from "./Sidebar";
 import RightPanel from "./RightPannel";
 import MobileNav from "./MobileNav";
 import { Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { useUserStore } from "../store/useUserStore";
 
 function MainLayout() {
+  const theme = useUserStore((state) => state.theme);
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+      document.body.style.backgroundColor = '#111827';
+    } else {
+      document.documentElement.classList.remove("dark");
+      document.body.style.backgroundColor = '';
+    }
+  }, [theme]);
+
   return (
-    <div className="h-screen flex flex-col">
-      <Navbar />
+    <div className={theme === 'dark' ? 'dark' : ''}>
+      <div className="h-screen flex flex-col">
+        <Navbar />
 
-      <div className="flex-1 max-w-7xl mx-auto w-full grid grid-cols-12 gap-6 px-4 py-4 overflow-hidden">
-        <aside className="col-span-3 hidden md:block overflow-y-auto">
-          <Sidebar />
-        </aside>
+        <div className="flex-1 max-w-7xl mx-auto w-full grid grid-cols-12 gap-6 px-4 py-4 overflow-hidden">
+          <aside className="col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden">
+            <Sidebar />
+          </aside>
 
-        <main className="col-span-12 md:col-span-6 overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden">
-          <Outlet />
-        </main>
+          <main className="col-span-12 md:col-span-6 overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden">
+            <Outlet />
+          </main>
 
-        <aside className="col-span-3 hidden md:block overflow-y-auto">
-          <RightPanel />
-        </aside>
+          <aside className="col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden">
+            <RightPanel />
+          </aside>
+        </div>
+
+        <MobileNav />
       </div>
-
-      <MobileNav />
     </div>
   );
 }

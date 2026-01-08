@@ -112,7 +112,7 @@ export default function Threads() {
           ))
         ) : (
           <div className="flex min-h-[68vh] flex-col items-center justify-center text-center rounded-xl border border-dashed border-gray-200">
-            <img className="h-[68vh] md:w-full rounded-xl" src="https://cdn.svgator.com/images/2024/04/book-with-broken-pages-animation-404-error.gif" alt="" />
+            <img className="h-[68vh] md:w-full rounded-xl" src="https://cdn.svgator.com/images/2024/04/book-with-broken-pages-animation-404-error.webp" alt="No threads found illustration" width="800" height="600" loading="lazy" />
           </div>
         )}
       </div>

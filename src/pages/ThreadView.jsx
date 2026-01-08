@@ -5,6 +5,7 @@ import { toggleThreadBookmark } from "../services/interactionService";
 import { useUserStore } from "../store/useUserStore";
 import SimpleEditor from '../components/threads/SimpleEditor';
 import { ArrowLeft, MessageSquare, Reply, ChevronUp, ChevronDown, Zap, Bookmark } from "lucide-react";
+import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 
 const toDateSafe = (value) => {
   if (!value) return null;
@@ -38,6 +39,7 @@ const formatRelativeTime = (value) => {
 function ThreadView() {
   const { thread_id } = useParams();
   const { user, updateUser } = useUserStore();
+  const theme = useUserStore((state) => state.theme);
   const [thread, setThread] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAnswerForm, setShowAnswerForm] = useState(false);
@@ -323,13 +325,15 @@ function ThreadView() {
               <div className="flex items-center gap-3">
                 {replyAuthor?.profile_pic && (
                   <img
-                    src={replyAuthor.profile_pic}
-                    alt={replyAuthor.name || replyAuthor.displayName || "User"}
+                    src={getOptimizedImageUrl(replyAuthor.profile_pic.slice(0, -3) + "webp", 'profile-small')}
+                    alt={`${replyAuthor.name || replyAuthor.displayName || "User"}'s profile picture`}
+                    width="32"
+                    height="32"
                     className="w-8 h-8 rounded-full object-cover"
                   />
                 )}
                 <div>
-                  <div className="text-sm font-semibold text-gray-900">{replyAuthor?.name || replyAuthor?.displayName || "User"}</div>
+                  <div className={`text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{replyAuthor?.name || replyAuthor?.displayName || "User"}</div>
                   <div className="text-xs text-gray-500">{formatRelativeTime(reply.createdAt || reply.timestamp)}</div>
                 </div>
               </div>
@@ -346,7 +350,7 @@ function ThreadView() {
                 </button>
               )}
             </div>
-            <p className="mt-2 text-sm text-gray-800 whitespace-pre-wrap break-words">{reply.content || ""}</p>
+            <p className={`mt-2 text-sm whitespace-pre-wrap break-words ${theme === 'dark' ? 'text-gray-300' : 'text-black'}`}>{reply.content || ""}</p>
 
             {isReplyingHere && (
               <div className="mt-3">
@@ -391,15 +395,15 @@ function ThreadView() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto space-y-4 pt-4 px-4">
-        <div className="h-6 w-20 bg-gray-200 rounded animate-pulse mb-4"></div>
-        <div className="bg-white rounded-xl p-4 h-96 animate-pulse">
+        <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-4"></div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 h-96 animate-pulse">
           <div className="flex gap-3 mb-4">
-            <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
             <div className="flex-1 space-y-2 py-1">
-              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
             </div>
           </div>
-          <div className="h-32 bg-gray-200 rounded-lg"></div>
+          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
         </div>
       </div>
     );
@@ -408,16 +412,19 @@ function ThreadView() {
   if (!thread) {
     return (
       <div className="max-w-xl mx-auto pt-10 px-4">
-        <div className="flex flex-col items-center justify-center text-center bg-white rounded-xl border border-dashed border-gray-200 overflow-hidden">
+        <div className="flex flex-col items-center justify-center text-center bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 overflow-hidden">
           <img
             className="w-full max-w-md"
-            src="https://cdn.svgator.com/images/2024/04/book-with-broken-pages-animation-404-error.gif"
-            alt="Thread not found"
+            src="https://cdn.svgator.com/images/2024/04/book-with-broken-pages-animation-404-error.webp"
+            alt="Thread not found - 404 error illustration"
+            width="600"
+            height="400"
+            loading="lazy"
           />
           <div className="pb-8 px-4">
-            <h2 className="text-xl font-bold text-gray-800">Thread not found</h2>
-            <p className="text-gray-500 mb-6 mt-2">This topic might have been deleted or doesn't exist.</p>
-            <Link to="/threads" className="bg-blue-600 text-white px-6 py-2 rounded-full font-medium hover:bg-blue-700 transition">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Thread not found</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 mt-2">This topic might have been deleted or doesn't exist.</p>
+            <Link to="/threads" className="bg-blue-600 dark:bg-blue-700 text-white px-6 py-2 rounded-full font-medium hover:bg-blue-700 dark:hover:bg-blue-800 transition">
               Go back to Threads
             </Link>
           </div>
@@ -433,35 +440,37 @@ function ThreadView() {
   return (
     <div className="max-w-4xl mx-auto pb-20 px-4 md:px-0">
       {/* Back Button */}
-      <Link to="/threads" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 mb-4 mt-4 transition">
+      <Link to="/threads" className="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 mb-4 mt-4 transition">
         <ArrowLeft size={18} />
         <span className="text-sm font-medium">Back to Threads</span>
       </Link>
 
       {/* Main Thread Card */}
-      <div className="bg-white rounded-xl overflow-hidden mb-6">
+      <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-xl overflow-hidden mb-6`}>
         {/* Author and Meta Info */}
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className={`px-6 py-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
           <div className="flex items-center gap-3">
             {thread.author?.profile_pic && (
               <img
-                src={thread.author.profile_pic}
-                alt={authorName}
+                src={getOptimizedImageUrl(thread.author.profile_pic.slice(0, -3) + "webp", 'profile-small')}
+                alt={`${authorName}'s profile picture`}
+                width="48"
+                height="48"
                 className="w-12 h-12 rounded-full object-cover"
               />
             )}
             <div className="flex-1">
-              <p className="font-semibold text-gray-900">{authorName}</p>
-              <div className="flex text-xs text-gray-500 flex-wrap">
-                <span className="px-2 py-1 text-gray-500 rounded">{thread.campus}</span>
+              <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{authorName}</p>
+              <div className="flex text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+                <span className="px-2 py-1 text-gray-500 dark:text-gray-400 rounded">{thread.campus}</span>
                 <span className="mt-1">•</span>
-                <span className="px-2 py-1 text-gray-500 rounded">{thread.branch}</span>
+                <span className="px-2 py-1 text-gray-500 dark:text-gray-400 rounded">{thread.branch}</span>
                 <span className="mt-1">•</span>
-                <span className="px-2 py-1 text-gray-500 rounded">{thread.batch}</span>
+                <span className="px-2 py-1 text-gray-500 dark:text-gray-400 rounded">{thread.batch}</span>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {formatRelativeTime(thread.createdAt)}
               </p>
             </div>
@@ -471,8 +480,8 @@ function ThreadView() {
         {/* Title and Category */}
         <div className="px-6 pt-6 pb-2">
           <div className="flex items-start justify-between gap-3 mb-2">
-            <h1 className="text-2xl font-bold text-gray-900">{thread.title}</h1>
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full whitespace-nowrap">
+            <h1 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{thread.title}</h1>
+            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-semibold rounded-full whitespace-nowrap">
               {thread.category}
             </span>
           </div>
@@ -480,16 +489,16 @@ function ThreadView() {
 
         {/* Description */}
         {thread.description && (
-          <div className="px-6 py-4 prose prose-sm max-w-none text-gray-700 [&_img]:max-h-96 [&_img]:rounded-lg">
+          <div className="px-6 py-4 prose prose-sm max-w-none text-gray-700 dark:text-gray-300 [&_img]:max-h-96 [&_img]:rounded-lg">
             <div dangerouslySetInnerHTML={{ __html: thread.description }} />
           </div>
         )}
 
         {/* Stats and Actions */}
-        <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100 bg-gray-50">
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+        <div className={`px-6 py-4 flex items-center justify-between border-t bg-gray-50 dark:bg-gray-700 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
+          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
             <div className="flex items-center gap-1">
-              <MessageSquare size={18} className="text-blue-600" />
+              <MessageSquare size={18} className="text-blue-600 dark:text-blue-400" />
               <span className="font-medium">{thread.Discussion?.length || 0} Answers</span>
             </div>
           </div>
@@ -499,14 +508,14 @@ function ThreadView() {
             <button
               onClick={handleSaveThread}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-semibold transition ${isSaved
-                  ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                ? "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-700"
+                : "bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-500"
                 }`}
             >
               <Bookmark size={16} className={isSaved ? "fill-current" : ""} />
               {isSaved ? "Saved" : "Save"}
             </button>
-            <span className="text-sm font-semibold text-gray-700 px-3 py-1 bg-white rounded-lg border">
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-3 py-1 bg-white dark:bg-gray-600 rounded-lg border border-gray-200 dark:border-gray-500">
               ⭐ {threadVoteDisplay} votes
             </span>
           </div>
@@ -516,13 +525,13 @@ function ThreadView() {
       {/* Answers Section */}
       <div className="mt-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">
+          <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
             Answers ({thread.Discussion?.length || 0})
           </h2>
           {user && (
             <button
               onClick={() => setShowAnswerForm(!showAnswerForm)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition text-sm"
+              className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-800 transition text-sm"
             >
               {showAnswerForm ? "Cancel" : "Add Answer"}
             </button>
@@ -531,8 +540,8 @@ function ThreadView() {
 
         {/* Add Answer Form */}
         {showAnswerForm && user && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Write your answer</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Write your answer</h3>
             <SimpleEditor
               onChange={setAnswerContent}
               initialContent={answerContent}
@@ -542,7 +551,7 @@ function ThreadView() {
               <button
                 onClick={handleSubmitAnswer}
                 disabled={submitingAnswer || !answerContent.trim()}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitingAnswer ? "Posting..." : "Post Answer"}
               </button>
@@ -551,7 +560,7 @@ function ThreadView() {
                   setShowAnswerForm(false);
                   setAnswerContent("");
                 }}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+                className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
                 Cancel
               </button>
@@ -573,27 +582,29 @@ function ThreadView() {
                 return timeA - timeB; // oldest first on tie
               })
               .map((answer) => (
-                <div key={answer.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div key={answer.id} className={`${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-xl overflow-hidden`}>
                   {/* Answer Header */}
-                  <div className="px-6 py-4 border-b border-gray-100">
+                  <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         {answer.author?.profile_pic && (
                           <img
-                            src={answer.author.profile_pic}
-                            alt={answer.author.name}
+                            src={getOptimizedImageUrl(answer.author.profile_pic.slice(0, -3) + "webp", 'profile-small')}
+                            alt={`${answer.author.name}'s profile picture`}
+                            width="40"
+                            height="40"
                             className="w-10 h-10 rounded-full object-cover"
                           />
                         )}
                         <div>
-                          <p className="font-semibold text-gray-900">{answer.author?.name || "User"}</p>
-                          <p className="text-xs text-gray-500">{formatRelativeTime(answer.createdAt)}</p>
+                          <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{answer.author?.name || "User"}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{formatRelativeTime(answer.createdAt)}</p>
                         </div>
                       </div>
                       {user && (
-                        <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-200">
+                        <div className="flex items-center gap-2 bg-white dark:bg-gray-700 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600">
                           <Zap size={14} className="text-amber-500" />
-                          <span className="text-xs font-semibold text-gray-700">
+                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                             {(answer.upvotes?.length || 0) - (answer.downvotes?.length || 0)}
                           </span>
                           <button
@@ -602,7 +613,8 @@ function ThreadView() {
                               handleAnswerVote(answer.id, "up");
                             }}
                             disabled={votingAnswers[answer.id]}
-                            className="text-gray-600 hover:text-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Upvote answer"
+                            className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Upvote"
                           >
                             <ChevronUp size={16} />
@@ -613,7 +625,8 @@ function ThreadView() {
                               handleAnswerVote(answer.id, "down");
                             }}
                             disabled={votingAnswers[answer.id]}
-                            className="text-gray-600 hover:text-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Downvote answer"
+                            className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Downvote"
                           >
                             <ChevronDown size={16} />
@@ -624,16 +637,16 @@ function ThreadView() {
                   </div>
 
                   {/* Answer Content */}
-                  <div className="px-6 py-4 prose prose-sm max-w-none text-gray-700 [&_img]:max-h-96 [&_img]:rounded-lg">
+                  <div className="px-6 py-4 prose prose-sm max-w-none text-gray-700 dark:text-gray-300 [&_img]:max-h-96 [&_img]:rounded-lg">
                     <div dangerouslySetInnerHTML={{ __html: answer.content }} />
                   </div>
 
                   {/* Answer Actions */}
-                  <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <div className="px-6 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
                       <button
                         onClick={() => setOpenReplies(prev => ({ ...prev, [answer.id]: !prev[answer.id] }))}
-                        className="text-gray-600 hover:text-blue-600 transition"
+                        className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition"
                       >
                         {openReplies[answer.id] ? "Hide replies" : `View replies (${countReplies(answer.replies) || 0})`}
                       </button>
@@ -648,7 +661,7 @@ function ThreadView() {
                           setReplyContent("");
                           setOpenReplies(prev => ({ ...prev, [answer.id]: true }));
                         }}
-                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition"
+                        className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition"
                       >
                         <Reply size={16} />
                         Reply
@@ -658,16 +671,16 @@ function ThreadView() {
 
                   {/* Reply Form */}
                   {replyingTo?.answerId === answer.id && !replyingTo?.replyId && user && (
-                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                    <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-100 dark:border-gray-700">
                       <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Reply to {answer.author?.name}
                         </label>
                         <textarea
                           value={replyContent}
                           onChange={(e) => setReplyContent(e.target.value)}
                           placeholder="Write your reply (plain text)..."
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white"
                           rows="3"
                         />
                       </div>
@@ -675,7 +688,7 @@ function ThreadView() {
                         <button
                           onClick={() => handleSubmitReply(answer.id)}
                           disabled={submittingReply || !replyContent.trim()}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                          className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         >
                           {submittingReply ? "Posting..." : "Post Reply"}
                         </button>
@@ -684,7 +697,7 @@ function ThreadView() {
                             setReplyingTo(null);
                             setReplyContent("");
                           }}
-                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition text-sm"
+                          className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm"
                         >
                           Cancel
                         </button>
@@ -694,8 +707,8 @@ function ThreadView() {
 
                   {/* Replies List */}
                   {openReplies[answer.id] && answer.replies && answer.replies.length > 0 && (
-                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-                      <p className="text-xs font-semibold text-gray-600 mb-3 uppercase">
+                    <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-100 dark:border-gray-700">
+                      <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-3 uppercase">
                         {countReplies(answer.replies)} {countReplies(answer.replies) === 1 ? "Reply" : "Replies"}
                       </p>
                       <div className="space-y-3 ml-2">
@@ -707,10 +720,10 @@ function ThreadView() {
               ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-dashed border-gray-300 p-8 text-center">
-            <MessageSquare size={32} className="mx-auto text-gray-400 mb-2" />
-            <p className="text-gray-600 font-medium">No answers yet</p>
-            <p className="text-sm text-gray-500 mt-1">Be the first to answer this question!</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
+            <MessageSquare size={32} className="mx-auto text-gray-400 dark:text-gray-600 mb-2" />
+            <p className="text-gray-600 dark:text-gray-300 font-medium">No answers yet</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Be the first to answer this question!</p>
           </div>
         )}
       </div>

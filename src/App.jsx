@@ -9,11 +9,18 @@ import PrivateRoute from "./components/PrivateRoute";
 import ThreadView from "./pages/ThreadView";
 
 function App() {
+
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
 
-      <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+      <Route
+        element={
+          <PrivateRoute>
+            <MainLayout />
+          </PrivateRoute>
+        }
+      >
         <Route path="/" element={<Home />} />
         <Route path="/threads" element={<Threads />} />
         <Route path="/profile" element={<Profile />} />

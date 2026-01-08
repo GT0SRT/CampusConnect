@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, googleProvider, db } from '../firebase';
-import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { Mail, Lock, ArrowRight, Handshake, Sparkles } from 'lucide-react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useUserStore } from '../store/useUserStore';
@@ -61,6 +61,23 @@ const Auth = () => {
     return () => unsubscribe();
   }, [navigate, setUser]);
 
+  // Handle Google redirect result to support environments blocking third-party cookies/popups
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          const userData = await ensureUserProfile(result.user.uid, result.user.email);
+          setUser(userData);
+          navigate('/', { replace: true });
+        }
+      } catch (err) {
+        // Common errors: popup/redirect blocked, cookies disabled
+        console.warn('Google Redirect handling error:', err);
+      }
+    })();
+  }, [navigate, setUser]);
+
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -105,14 +122,12 @@ const Auth = () => {
     setError('');
     setIsLoading(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const userData = await ensureUserProfile(result.user.uid, result.user.email);
-      setUser(userData);
-      navigate('/');
+      // Use redirect to avoid third-party cookie/popup issues
+      await signInWithRedirect(auth, googleProvider);
+      // Navigation will happen after redirect result is processed
     } catch (err) {
       console.error('Google Sign-In Error:', err);
-      setError(err.message || "Google Sign-In Failed");
-    } finally {
+      setError('Google Sign-In failed. Please try again.');
       setIsLoading(false);
     }
   };
@@ -218,7 +233,7 @@ const Auth = () => {
                 disabled={isLoading}
                 className="mt-6 w-full bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google logo" width="20" height="20" />
                 Continue with Google
               </button>
             </div>
