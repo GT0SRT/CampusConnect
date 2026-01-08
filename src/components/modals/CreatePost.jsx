@@ -42,7 +42,8 @@ export default function CreatePost({ onClose, onPostCreated }) {
     try {
       setAiLoading(true);
       const base64 = await fileToBase64(imageFile);
-      const apiUrl = import.meta.env.VITE_CAPTION_API_URL || "http://localhost:8000/generate";
+      const apiUrl = import.meta.env.VITE_CAPTION_API_URL;
+      if (!apiUrl) throw new Error("Caption API URL not configured");
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

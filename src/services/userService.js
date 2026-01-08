@@ -18,7 +18,7 @@ export const createUserProfile = async (uid, email, formData, profilePicUrl) => 
       campus: formData.campus,
       batch: formData.batch,
       branch: formData.branch,
-      profile_pic: profilePicUrl || "https://ui-avatars.com/api/?name=User&background=random",
+      profile_pic: profilePicUrl || `${import.meta.env.VITE_AVATAR_API_URL}?name=User&background=random`,
       postsCount: 0,
       threadsCount: 0,
       karmaCount: 0,

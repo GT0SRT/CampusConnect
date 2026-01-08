@@ -23,7 +23,7 @@ const tabs = ["Posts", "Threads", "Saved", "Settings"];
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, setUser, updateUser, clearUser, theme, toggleTheme } =useUserStore();
+  const { user, setUser, updateUser, clearUser, theme, toggleTheme } = useUserStore();
   const [active, setActive] = useState("Posts");
   const [isEditing, setIsEditing] = useState(false);
   const [myPosts, setMyPosts] = useState([]);
@@ -162,7 +162,7 @@ export default function Profile() {
         <img
           src={
             userProfilePic ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+            `${import.meta.env.VITE_AVATAR_API_URL}?name=${encodeURIComponent(
               user.name || "User"
             )}&background=random&size=150`
           }

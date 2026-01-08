@@ -111,7 +111,7 @@ export default function CommentsModal({ postId, onClose }) {
           ) : comments.length > 0 ? (
             comments.map((comment) => (
               <div key={comment.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2">
-                <img src={comment.author?.profile_pic || "https://ui-avatars.com/api/?name=User&background=random&size=40"} className="w-9 h-9 rounded-full object-cover bg-gray-200 border border-gray-100" />
+                <img src={comment.author?.profile_pic || `${import.meta.env.VITE_AVATAR_API_URL}?name=User&background=random&size=40`} className="w-9 h-9 rounded-full object-cover bg-gray-200 border border-gray-100" />
 
                 <div className="flex-1">
                   {/* Parent Comment */}

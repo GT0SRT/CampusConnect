@@ -101,7 +101,7 @@ export default function PostCard({ post, onPostDeleted, isPriority = false }) {
           src={
             post.author?.profile_pic
               ? getOptimizedImageUrl(post.author.profile_pic.slice(0, -3) + "webp", 'profile-small')
-              : `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author?.name || "User")}&background=random&size=40`
+              : `${import.meta.env.VITE_AVATAR_API_URL}?name=${encodeURIComponent(post.author?.name || "User")}&background=random&size=40`
           }
           alt={`${post.author?.name || "User"}'s profile picture`}
           width="40"

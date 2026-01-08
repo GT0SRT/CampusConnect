@@ -2,14 +2,20 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+import os
+from dotenv import load_dotenv
 from gemini_client import process_image_with_gemini
+
+load_dotenv()
 
 app = FastAPI()
 
-# Enable CORS for frontend
+# CORS Configuration - Load from environment or use defaults
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,*").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -41,4 +47,6 @@ async def generate_endpoint(request: ImageRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    server_host = os.getenv("SERVER_HOST", "0.0.0.0")
+    server_port = int(os.getenv("SERVER_PORT", 8000))
+    uvicorn.run(app, host=server_host, port=server_port)
