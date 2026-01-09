@@ -69,15 +69,3 @@ python main.py
 
 API runs at http://localhost:8000
 
-## Build and Lint
-
-```bash
-npm run lint
-npm run build
-```
-
-## Deployment Notes
-
-- Set the same frontend env vars in Vercel (or your host) and point `VITE_CAPTION_API_URL` to the deployed FastAPI endpoint.
-- Deploy FastAPI to Render/Railway/Cloud Run and allow CORS for your frontend domain.
-- Configure Firebase Firestore/Storage security rules before going live.

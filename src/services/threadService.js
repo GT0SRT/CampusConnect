@@ -1,8 +1,9 @@
 import {
   collection, addDoc, query, where, getDocs, serverTimestamp,
-  doc, updateDoc, increment, orderBy, getDoc, deleteDoc
+  doc, updateDoc, increment, orderBy, getDoc, deleteDoc, limit, startAfter
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { selectListFields, createPaginationResult } from "../utils/pagination";
 
 export const CreateThread = async (uid, title, description, category, userDetails) => {
   try {
@@ -328,6 +329,107 @@ export const voteOnAnswer = async (threadId, answerId, uid, voteType) => {
     });
   } catch (error) {
     console.error("Error voting on answer:", error);
+    throw error;
+  }
+};
+
+export const getPaginatedThreads = async (cursor = null, pageSize = 10) => {
+  try {
+    let q;
+    if (cursor) {
+      const cursorData = JSON.parse(atob(cursor));
+      const cursorDoc = await getDoc(doc(db, "threads", cursorData.id));
+
+      q = query(
+        collection(db, "threads"),
+        orderBy("createdAt", "desc"),
+        startAfter(cursorDoc),
+        limit(pageSize + 1)
+      );
+    } else {
+      q = query(
+        collection(db, "threads"),
+        orderBy("createdAt", "desc"),
+        limit(pageSize + 1)
+      );
+    }
+
+    const querySnapshot = await getDocs(q);
+    const threads = querySnapshot.docs.map(threadDoc => ({
+      id: threadDoc.id,
+      ...selectListFields({ id: threadDoc.id, ...threadDoc.data() }, 'thread')
+    }));
+
+    return createPaginationResult(threads, pageSize);
+
+  } catch (error) {
+    console.error("Error fetching paginated threads:", error);
+    throw error;
+  }
+};
+
+export const getUserThreadsPaginated = async (uid, cursor = null, pageSize = 10) => {
+  try {
+    let q;
+    if (cursor) {
+      const cursorData = JSON.parse(atob(cursor));
+      const cursorDoc = await getDoc(doc(db, "threads", cursorData.id));
+
+      q = query(
+        collection(db, "threads"),
+        where("uid", "==", uid),
+        orderBy("createdAt", "desc"),
+        startAfter(cursorDoc),
+        limit(pageSize + 1)
+      );
+    } else {
+      q = query(
+        collection(db, "threads"),
+        where("uid", "==", uid),
+        orderBy("createdAt", "desc"),
+        limit(pageSize + 1)
+      );
+    }
+
+    const querySnapshot = await getDocs(q);
+    const threads = querySnapshot.docs.map(threadDoc => ({
+      id: threadDoc.id,
+      ...selectListFields({ id: threadDoc.id, ...threadDoc.data() }, 'thread')
+    }));
+
+    return createPaginationResult(threads, pageSize);
+
+  } catch (error) {
+    console.error("Error fetching user threads paginated:", error);
+    throw error;
+  }
+};
+
+export const getThreadDetailsForDisplay = async (threadId) => {
+  try {
+    const threadRef = doc(db, "threads", threadId);
+    const threadSnap = await getDoc(threadRef);
+
+    if (!threadSnap.exists()) return null;
+
+    const threadData = threadSnap.data();
+    let authorData = { name: "Unknown User", profile_pic: "" };
+
+    if (threadData.uid) {
+      const userRef = doc(db, "users", threadData.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        authorData = userSnap.data();
+      }
+    }
+
+    return {
+      id: threadSnap.id,
+      ...threadData,
+      author: authorData
+    };
+  } catch (error) {
+    console.error("Error fetching thread details for display:", error);
     throw error;
   }
 };
