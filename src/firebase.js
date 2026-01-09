@@ -21,11 +21,13 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
+console.log('[Firebase] Initializing Firebase with config...')
 let app;
 try {
   app = initializeApp(firebaseConfig);
+  console.log('[Firebase] Firebase initialized successfully ✓')
 } catch (error) {
-  console.error("Error initializing Firebase:", error);
+  console.error("[Firebase] Error initializing Firebase:", error);
   throw error;
 }
 

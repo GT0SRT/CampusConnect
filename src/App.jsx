@@ -6,10 +6,22 @@ import Auth from "./pages/Auth";
 import PrivateRoute from "./components/PrivateRoute";
 
 // Lazy load pages for better performance
-const Home = lazy(() => import("./pages/Home"));
-const Threads = lazy(() => import("./pages/Threads"));
-const Profile = lazy(() => import("./pages/Profile"));
-const ThreadView = lazy(() => import("./pages/ThreadView"));
+const Home = lazy(() => {
+  console.log('[Route] Loading Home page...')
+  return import("./pages/Home")
+});
+const Threads = lazy(() => {
+  console.log('[Route] Loading Threads page...')
+  return import("./pages/Threads")
+});
+const Profile = lazy(() => {
+  console.log('[Route] Loading Profile page...')
+  return import("./pages/Profile")
+});
+const ThreadView = lazy(() => {
+  console.log('[Route] Loading ThreadView page...')
+  return import("./pages/ThreadView")
+});
 
 // Loading fallback component
 function PageLoader() {
@@ -24,6 +36,7 @@ function PageLoader() {
 }
 
 function App() {
+  console.log('[App] App component rendering...')
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
