@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
-import { compressionPlugin } from './vite-compression-plugin.js';
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -20,10 +19,6 @@ export default defineConfig(({ mode }) => ({
         ],
       },
     }),
-    // Gzip compression
-    compressionPlugin({ algorithm: 'gzip', threshold: 1024 }),
-    // Brotli compression
-    compressionPlugin({ algorithm: 'brotli', threshold: 1024 }),
     // Bundle analyzer (only in analyze mode)
     mode === 'analyze' && visualizer({
       open: true,
