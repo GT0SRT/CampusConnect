@@ -72,15 +72,11 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('@tanstack/react-query')) {
               return 'react-query';
             }
-            // Lucide icons - split separately for better caching
-            if (id.includes('lucide-react')) {
-              return 'icons';
-            }
             // Date utilities
             if (id.includes('date-fns')) {
               return 'date-utils';
             }
-            // Other node_modules
+            // Other node_modules (including lucide-react to avoid tree-shaking issues)
             return 'vendor';
           }
         },
