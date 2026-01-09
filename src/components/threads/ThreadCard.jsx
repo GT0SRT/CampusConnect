@@ -210,7 +210,7 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
                     </button>
                   )}
                   {currentUser?.uid !== thread.uid && (
-                    <button className="w-full px-4 py-2 text-left text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm">
+                    <button aria-label="Report thread" className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm">
                       Report Thread
                     </button>
                   )}

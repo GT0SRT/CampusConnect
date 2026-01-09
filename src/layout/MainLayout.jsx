@@ -2,10 +2,12 @@ import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import RightPanel from "./RightPannel";
 import MobileNav from "./MobileNav";
-import GeminiBot from "../components/AI/GeminiBot";
 import { Outlet } from "react-router-dom";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, lazy, Suspense } from "react";
 import { useUserStore } from "../store/useUserStore";
+
+// Lazy load AI components since they're heavy
+const GeminiBot = lazy(() => import("../components/AI/GeminiBot"));
 
 function MainLayout() {
   const theme = useUserStore((state) => state.theme);
@@ -42,7 +44,9 @@ function MainLayout() {
         </div>
 
         <MobileNav />
-        <GeminiBot />
+        <Suspense fallback={null}>
+          <GeminiBot />
+        </Suspense>
       </div>
     </div>
   );

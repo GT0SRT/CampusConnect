@@ -350,7 +350,7 @@ function ThreadView() {
                 </button>
               )}
             </div>
-            <p className={`mt-2 text-sm whitespace-pre-wrap break-words ${theme === 'dark' ? 'text-gray-300' : 'text-black'}`}>{reply.content || ""}</p>
+            <p className={`mt-2 text-sm whitespace-pre-wrap break-words ${theme === 'dark' ? 'text-gray-100' : 'text-black'}`}>{reply.content || ""}</p>
 
             {isReplyingHere && (
               <div className="mt-3">
@@ -374,7 +374,8 @@ function ThreadView() {
                       setReplyingTo(null);
                       setReplyContent("");
                     }}
-                    className="px-3 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm hover:bg-gray-200"
+                    aria-label="Cancel reply"
+                    className="px-3 py-2 bg-gray-100 text-gray-900 rounded-lg text-sm hover:bg-gray-200"
                   >
                     Cancel
                   </button>
@@ -462,16 +463,16 @@ function ThreadView() {
             )}
             <div className="flex-1">
               <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{authorName}</p>
-              <div className="flex text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-                <span className="px-2 py-1 text-gray-500 dark:text-gray-400 rounded">{thread.campus}</span>
+              <div className="flex text-xs text-gray-600 dark:text-gray-300 flex-wrap">
+                <span className="px-2 py-1 text-gray-600 dark:text-gray-300 rounded">{thread.campus}</span>
                 <span className="mt-1">•</span>
-                <span className="px-2 py-1 text-gray-500 dark:text-gray-400 rounded">{thread.branch}</span>
+                <span className="px-2 py-1 text-gray-600 dark:text-gray-300 rounded">{thread.branch}</span>
                 <span className="mt-1">•</span>
-                <span className="px-2 py-1 text-gray-500 dark:text-gray-400 rounded">{thread.batch}</span>
+                <span className="px-2 py-1 text-gray-600 dark:text-gray-300 rounded">{thread.batch}</span>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-600 dark:text-gray-300">
                 {formatRelativeTime(thread.createdAt)}
               </p>
             </div>
@@ -497,7 +498,7 @@ function ThreadView() {
 
         {/* Stats and Actions */}
         <div className={`px-6 py-4 flex items-center justify-between border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
-          <div className={`flex items-center gap-4 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div className={`flex items-center gap-4 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
             <div className="flex items-center gap-1">
               <MessageSquare size={18} className={`text-blue-600 ${theme === 'dark' ? 'dark:text-blue-400' : ''}`} />
               <span className="font-medium">{thread.Discussion?.length || 0} Answers</span>
@@ -508,6 +509,7 @@ function ThreadView() {
           <div className="flex items-center gap-3">
             <button
               onClick={handleSaveThread}
+              aria-label={isSaved ? "Unsave thread" : "Save thread"}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-semibold transition ${isSaved
                 ? "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-700"
                 : "bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-500"
@@ -532,6 +534,7 @@ function ThreadView() {
           {user && (
             <button
               onClick={() => setShowAnswerForm(!showAnswerForm)}
+              aria-label={showAnswerForm ? "Cancel answer" : "Add answer"}
               className="px-4 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-800 transition text-sm"
             >
               {showAnswerForm ? "Cancel" : "Add Answer"}
@@ -561,6 +564,7 @@ function ThreadView() {
                   setShowAnswerForm(false);
                   setAnswerContent("");
                 }}
+                aria-label="Cancel answer"
                 className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
                 Cancel
@@ -644,10 +648,11 @@ function ThreadView() {
 
                   {/* Answer Actions */}
                   <div className={`px-6 py-3 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'} ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'} flex items-center justify-between`}>
-                    <div className={`flex items-center gap-3 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <div className={`flex items-center gap-3 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                       <button
                         onClick={() => setOpenReplies(prev => ({ ...prev, [answer.id]: !prev[answer.id] }))}
-                        className={`text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition`}
+                        aria-label={openReplies[answer.id] ? "Hide replies" : `View replies (${countReplies(answer.replies) || 0})`}
+                        className={`text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition`}
                       >
                         {openReplies[answer.id] ? "Hide replies" : `View replies (${countReplies(answer.replies) || 0})`}
                       </button>

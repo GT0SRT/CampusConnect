@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useUserStore } from "../store/useUserStore";
-import CreateModal from "../components/modals/CreateModal";
-import { Plus } from "lucide-react";
-import { Handshake } from "lucide-react";
+import { Plus, Handshake } from "lucide-react";
+
+// Lazy load modal to reduce initial bundle size
+const CreateModal = lazy(() => import("../components/modals/CreateModal"));
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -54,7 +55,11 @@ export default function Navbar() {
       </header>
 
       {/* Create Modal */}
-      {open && <CreateModal onClose={() => setOpen(false)} />}
+      {open && (
+        <Suspense fallback={null}>
+          <CreateModal onClose={() => setOpen(false)} />
+        </Suspense>
+      )}
     </>
   );
 }

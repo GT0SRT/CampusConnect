@@ -101,7 +101,7 @@ export default function Sidebar() {
           to="/profile"
           label="Profile"
           Icon={User}
-          activeClasses="text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700"
+          activeClasses={`${theme === 'dark' ? 'text-gray-300 bg-gray-700' : 'text-gray-700 bg-gray-100'}`}
           theme={theme}
         />
       </Section>

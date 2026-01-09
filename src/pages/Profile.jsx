@@ -154,6 +154,7 @@ export default function Profile() {
         {/* Edit Button */}
         <button
           onClick={() => setIsEditing((prev) => !prev)}
+          aria-label={isEditing ? "Cancel editing profile" : "Edit profile"}
           className={`absolute top-4 right-4 text-xs border px-3 py-1.5 rounded-full font-medium transition ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-200' : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-600'}`}>
           {isEditing ? "Cancel" : "Edit Profile"}
         </button>
@@ -201,6 +202,8 @@ export default function Profile() {
           <button
             key={tab}
             onClick={() => setActive(tab)}
+            aria-label={`View ${tab.toLowerCase()}`}
+            aria-current={active === tab ? 'page' : undefined}
             className={`px-5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${active === tab
               ? theme === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-black shadow-sm'
               : theme === 'dark' ? 'text-gray-300 hover:text-gray-100' : 'text-gray-500 hover:text-gray-700'

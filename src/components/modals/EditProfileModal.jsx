@@ -93,6 +93,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
             <button
               type="button"
               onClick={onClose}
+              aria-label="Close edit profile"
               className={`${theme === 'dark' ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-white/20'} rounded-full p-2 transition`}
             ><X />
             </button>
@@ -133,6 +134,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
               <button
                 type="button"
                 onClick={handleRemovePhoto}
+                aria-label="Remove profile photo"
                 className={`text-sm font-medium hover:underline transition ${theme === 'dark' ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'}`}
               >
                 Remove Photo
@@ -245,6 +247,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
             <button
               type="button"
               onClick={onClose}
+              aria-label="Cancel editing"
               className={`flex-1 px-6 py-3 rounded-xl font-semibold transition ${theme === 'dark' ? 'text-gray-300 bg-gray-700 hover:bg-gray-600' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'}`}
             >
               Cancel
@@ -252,6 +255,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
             <button
               type="submit"
               disabled={loading}
+              aria-label="Save profile changes"
               className={`flex-1 px-6 py-3 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg ${theme === 'dark' ? 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 shadow-blue-500/20' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-blue-500/30'}`}
             >
               {loading ? (

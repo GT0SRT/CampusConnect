@@ -101,7 +101,7 @@ function CommentsModal({ postId, onClose }) {
         {/* Header */}
         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
           <h3 className="font-bold text-gray-800">Comments</h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded-full"><X className="w-5 h-5 text-gray-500" /></button>
+          <button onClick={onClose} aria-label="Close comments" className="p-1 hover:bg-gray-200 rounded-full"><X className="w-5 h-5 text-gray-700" /></button>
         </div>
 
         {/* List */}
@@ -122,12 +122,13 @@ function CommentsModal({ postId, onClose }) {
 
                   {/* Action Line */}
                   <div className="flex items-center gap-4 mt-1">
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-600">
                       {comment.createdAt?.seconds ? formatDistanceToNow(new Date(comment.createdAt.seconds * 1000), { addSuffix: false }) : "now"}
                     </span>
                     <button
                       onClick={() => initiateReply(comment.id, comment.author.name)}
-                      className="text-xs font-semibold text-gray-500 hover:text-gray-800"
+                      aria-label={`Reply to ${comment.author?.name}'s comment`}
+                      className="text-xs font-semibold text-gray-600 hover:text-gray-900"
                     >
                       Reply
                     </button>
@@ -167,7 +168,8 @@ function CommentsModal({ postId, onClose }) {
                                   </span>
                                   <button
                                     onClick={() => initiateReply(comment.id, reply.author.name)}
-                                    className="text-xs font-semibold text-gray-500 hover:text-gray-800"
+                                    aria-label={`Reply to ${reply.author?.name}'s comment`}
+                                    className="text-xs font-semibold text-gray-600 hover:text-gray-900"
                                   >
                                     Reply
                                   </button>
@@ -209,7 +211,7 @@ function CommentsModal({ postId, onClose }) {
               autoComplete="off"
             />
             {replyingTo && (
-              <button type="button" onClick={() => { setReplyingTo(null); setNewComment(""); }} className="text-xs font-bold text-gray-400 hover:text-gray-600">X</button>
+              <button type="button" onClick={() => { setReplyingTo(null); setNewComment(""); }} aria-label="Cancel reply" className="text-xs font-bold text-gray-600 hover:text-gray-900">X</button>
             )}
             <button type="submit" disabled={!newComment.trim()} className="text-blue-600 font-semibold text-sm disabled:opacity-50 hover:text-blue-700">
               Post

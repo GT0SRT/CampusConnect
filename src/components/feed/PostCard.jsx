@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Heart, MessageCircle, Share2, Bookmark, Send, Trash2, MoreVertical } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { memo } from 'react';
@@ -6,8 +6,10 @@ import { getAuth } from 'firebase/auth';
 import { toggleBookmark, toggleLike, addComment } from '../../services/interactionService';
 import { deletePost } from '../../services/postService';
 import { useUserStore } from '../../store/useUserStore';
-import CommentsModal from '../modals/CommentsModal';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
+
+// Lazy load modal
+const CommentsModal = lazy(() => import('../modals/CommentsModal'));
 
 function PostCard({ post, onPostDeleted, isPriority = false }) {
   const auth = getAuth();
@@ -139,7 +141,7 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
                 </button>
               )}
               {user?.uid !== post.uid && (
-                <button className="w-full px-4 py-2 text-left text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm">
+                <button aria-label="Report post" className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm">
                   Report Post
                 </button>
               )}
@@ -150,7 +152,7 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
 
       {/* Image */}
       {post.imageUrl && (
-        <div className="bg-gray-50 dark:bg-gray-700 w-full flex justify-center">
+        <div className="w-full aspect-[4/3] bg-gray-50 dark:bg-gray-700 overflow-hidden">
           <img
             src={getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'feed')}
             srcSet={`
@@ -160,8 +162,8 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
             sizes="(max-width: 768px) 100vw, 800px"
             alt={post.caption || `Post by ${post.author?.name || "User"}`}
             width="600"
-            height="500"
-            className="w-full max-h-[500px] object-contain"
+            height="450"
+            className="w-full h-full object-cover"
             loading={isPriority ? "eager" : "lazy"}
             fetchPriority={isPriority ? "high" : "auto"}
             decoding="async"
@@ -171,7 +173,7 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
 
       {/* Actions */}
       <div className="p-4 space-y-3">
-        <div className={`flex items-center justify-between ${theme === 'dark' ? 'text-gray-400' : 'text-black'}`}>
+        <div className={`flex items-center justify-between ${theme === 'dark' ? 'text-gray-300' : 'text-black'}`}>
           <div className='flex gap-6'>
             {/* LIKE BUTTON */}
             <div className='flex flex-col items-center justify-center'>
@@ -256,10 +258,12 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
 
       {/* RENDER MODAL OUTSIDE THE CARD */}
       {showCommentsModal && (
-        <CommentsModal
-          postId={post.id}
-          onClose={() => setShowCommentsModal(false)}
-        />
+        <Suspense fallback={null}>
+          <CommentsModal
+            postId={post.id}
+            onClose={() => setShowCommentsModal(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

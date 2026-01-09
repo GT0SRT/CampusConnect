@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createPost } from "../../services/postService";
 import { useUserStore } from "../../store/useUserStore";
+import { Crop, ZoomIn, ZoomOut } from "lucide-react";
 
 export default function CreatePost({ onClose, onPostCreated }) {
   const { user } = useUserStore();
@@ -10,6 +11,12 @@ export default function CreatePost({ onClose, onPostCreated }) {
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState("");
+  const [showCropEditor, setShowCropEditor] = useState(false);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const cropContainerRef = useRef(null);
   const theme = useUserStore((state) => state.theme);
   const styles = ["concise", "professional", "funny", "friendly", "motivational", "sarcastic"];
 
@@ -18,7 +25,67 @@ export default function CreatePost({ onClose, onPostCreated }) {
     if (file) {
       setImageFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+      setShowCropEditor(true);
+      setCropZoom(1);
+      setCropOffset({ x: 0, y: 0 });
     }
+  };
+
+  const handleCropMouseDown = (e) => {
+    if (!cropContainerRef.current) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - cropOffset.x, y: e.clientY - cropOffset.y });
+  };
+
+  const handleCropMouseMove = (e) => {
+    if (!isDragging || !cropContainerRef.current) return;
+    const container = cropContainerRef.current;
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    const maxX = (container.offsetWidth * cropZoom - container.offsetWidth) / 2;
+    const maxY = (container.offsetHeight * cropZoom - container.offsetHeight) / 2;
+    setCropOffset({
+      x: Math.max(-maxX, Math.min(maxX, newX)),
+      y: Math.max(-maxY, Math.min(maxY, newY))
+    });
+  };
+
+  const handleCropMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const applyCrop = () => {
+    if (!cropContainerRef.current || !previewUrl) return;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+
+    img.onload = () => {
+      const containerWidth = cropContainerRef.current.offsetWidth;
+      const containerHeight = cropContainerRef.current.offsetHeight;
+      canvas.width = containerWidth;
+      canvas.height = containerHeight;
+
+      const scaledWidth = containerWidth * cropZoom;
+      const scaledHeight = containerHeight * cropZoom;
+      const scaleFactor = scaledWidth / img.width;
+
+      ctx.drawImage(
+        img,
+        -cropOffset.x / scaleFactor,
+        -cropOffset.y / scaleFactor,
+        (scaledWidth / scaleFactor),
+        (scaledHeight / scaleFactor)
+      );
+
+      canvas.toBlob((blob) => {
+        const croppedUrl = URL.createObjectURL(blob);
+        setPreviewUrl(croppedUrl);
+        setImageFile(blob);
+        setShowCropEditor(false);
+      });
+    };
+    img.src = previewUrl;
   };
 
   const fileToBase64 = (file) =>
@@ -109,15 +176,119 @@ export default function CreatePost({ onClose, onPostCreated }) {
 
   return (
     <form onSubmit={handleSubmit} className={`space-y-4 mt-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-      {/* Image Preview Area */}
-      <div className={`border-2 border-dashed rounded-xl text-center cursor-pointer transition relative h-52 flex items-center justify-center overflow-hidden ${theme === 'dark' ? 'border-gray-600 bg-gray-700 hover:bg-gray-600' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
-        {previewUrl ? (
-          <img
-            src={previewUrl}
-            alt="Preview"
-            className="h-full w-full object-contain"
-          />
-        ) : (
+      {/* Crop Editor Modal */}
+      {showCropEditor && previewUrl && (
+        <div className={`border-2 rounded-xl p-4 space-y-3 ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Crop size={18} />
+              <h3 className="font-semibold text-sm">Crop & Adjust Image</h3>
+            </div>
+            <p className="text-xs opacity-75">Move & Zoom to frame your shot</p>
+          </div>
+
+          {/* Crop Canvas */}
+          <div
+            ref={cropContainerRef}
+            className={`relative w-full aspect-[4/3] rounded-lg overflow-hidden border-2 cursor-grab active:cursor-grabbing ${theme === 'dark' ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-gray-200'}`}
+            onMouseDown={handleCropMouseDown}
+            onMouseMove={handleCropMouseMove}
+            onMouseUp={handleCropMouseUp}
+            onMouseLeave={handleCropMouseUp}
+            style={{ userSelect: 'none' }}
+          >
+            <img
+              src={previewUrl}
+              alt="Crop preview"
+              className="w-full h-full object-contain"
+              style={{
+                transform: `scale(${cropZoom}) translate(${cropOffset.x}px, ${cropOffset.y}px)`,
+                transition: isDragging ? 'none' : 'transform 0.2s'
+              }}
+              draggable={false}
+            />
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setCropZoom(Math.max(1, cropZoom - 0.1))}
+              className={`p-2 rounded-lg transition ${theme === 'dark' ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
+              aria-label="Zoom out"
+            >
+              <ZoomOut size={16} />
+            </button>
+            <div className="flex-1 max-w-xs">
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.1"
+                value={cropZoom}
+                onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setCropZoom(Math.min(3, cropZoom + 0.1))}
+              className={`p-2 rounded-lg transition ${theme === 'dark' ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
+              aria-label="Zoom in"
+            >
+              <ZoomIn size={16} />
+            </button>
+          </div>
+
+          {/* Crop Actions */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowCropEditor(false)}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition ${theme === 'dark' ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-300 hover:bg-gray-400'}`}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={applyCrop}
+              className={`flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg transition ${theme === 'dark' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+            >
+              Apply Crop
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Image Preview Area - Matches actual post display */}
+      <div className={`border-2 border-dashed rounded-xl text-center cursor-pointer transition relative overflow-hidden ${previewUrl && !showCropEditor ? 'aspect-[4/3]' : 'h-52 flex items-center justify-center'} ${theme === 'dark' ? 'border-gray-600 bg-gray-700 hover:bg-gray-600' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}>
+        {previewUrl && !showCropEditor ? (
+          <div className="w-full h-full relative group">
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCropEditor(true)}
+                className="px-3 py-2 bg-white text-gray-900 rounded-lg text-sm font-medium hover:bg-gray-100 transition"
+                aria-label="Edit image crop"
+              >
+                ✏️ Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => { setImageFile(null); setPreviewUrl(null); }}
+                className="px-3 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition"
+                aria-label="Remove image"
+              >
+                ✕ Remove
+              </button>
+            </div>
+          </div>
+        ) : !showCropEditor ? (
           <div className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-400'} flex flex-col items-center gap-2`}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -137,7 +308,7 @@ export default function CreatePost({ onClose, onPostCreated }) {
               Click to upload photo
             </span>
           </div>
-        )}
+        ) : null}
 
         <input
           type="file"
