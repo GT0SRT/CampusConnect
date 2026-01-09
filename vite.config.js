@@ -64,8 +64,8 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('firebase')) {
               return 'firebase';
             }
-            // TipTap editor
-            if (id.includes('@tiptap')) {
+            // Editor and related - keep together to avoid circular deps
+            if (id.includes('@tiptap') || id.includes('lucide-react')) {
               return 'editor';
             }
             // React Query
@@ -76,7 +76,7 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('date-fns')) {
               return 'date-utils';
             }
-            // Other node_modules (including lucide-react to avoid tree-shaking issues)
+            // Other node_modules
             return 'vendor';
           }
         },
