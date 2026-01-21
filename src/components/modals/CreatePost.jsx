@@ -42,8 +42,11 @@ export default function CreatePost({ onClose, onPostCreated }) {
     const container = cropContainerRef.current;
     const newX = e.clientX - dragStart.x;
     const newY = e.clientY - dragStart.y;
-    const maxX = (container.offsetWidth * cropZoom - container.offsetWidth) / 2;
-    const maxY = (container.offsetHeight * cropZoom - container.offsetHeight) / 2;
+
+    // Calculate maximum allowed offset based on zoom
+    const maxX = cropZoom > 1 ? (container.offsetWidth * (cropZoom - 1)) / 2 : 0;
+    const maxY = cropZoom > 1 ? (container.offsetHeight * (cropZoom - 1)) / 2 : 0;
+
     setCropOffset({
       x: Math.max(-maxX, Math.min(maxX, newX)),
       y: Math.max(-maxY, Math.min(maxY, newY))
@@ -63,27 +66,33 @@ export default function CreatePost({ onClose, onPostCreated }) {
     img.onload = () => {
       const containerWidth = cropContainerRef.current.offsetWidth;
       const containerHeight = cropContainerRef.current.offsetHeight;
+
+      // Set canvas size to container size
       canvas.width = containerWidth;
       canvas.height = containerHeight;
 
-      const scaledWidth = containerWidth * cropZoom;
-      const scaledHeight = containerHeight * cropZoom;
-      const scaleFactor = scaledWidth / img.width;
+      // Calculate the scale to fit image in container
+      const scaleX = containerWidth / img.width;
+      const scaleY = containerHeight / img.height;
+      const scale = Math.max(scaleX, scaleY); // Use max to ensure image covers container
 
-      ctx.drawImage(
-        img,
-        -cropOffset.x / scaleFactor,
-        -cropOffset.y / scaleFactor,
-        (scaledWidth / scaleFactor),
-        (scaledHeight / scaleFactor)
-      );
+      // Calculate scaled dimensions
+      const scaledWidth = img.width * scale * cropZoom;
+      const scaledHeight = img.height * scale * cropZoom;
+
+      // Calculate centered position
+      const x = (containerWidth - scaledWidth) / 2 - cropOffset.x;
+      const y = (containerHeight - scaledHeight) / 2 - cropOffset.y;
+
+      // Draw the image
+      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
 
       canvas.toBlob((blob) => {
         const croppedUrl = URL.createObjectURL(blob);
         setPreviewUrl(croppedUrl);
-        setImageFile(blob);
+        setImageFile(new File([blob], "cropped-image.jpg", { type: "image/jpeg" }));
         setShowCropEditor(false);
-      });
+      }, "image/jpeg", 0.95);
     };
     img.src = previewUrl;
   };
@@ -200,10 +209,11 @@ export default function CreatePost({ onClose, onPostCreated }) {
             <img
               src={previewUrl}
               alt="Crop preview"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
               style={{
-                transform: `scale(${cropZoom}) translate(${cropOffset.x}px, ${cropOffset.y}px)`,
-                transition: isDragging ? 'none' : 'transform 0.2s'
+                transform: `translate(${cropOffset.x}px, ${cropOffset.y}px) scale(${cropZoom})`,
+                transition: isDragging ? 'none' : 'transform 0.2s',
+                transformOrigin: 'center center'
               }}
               draggable={false}
             />
@@ -213,8 +223,14 @@ export default function CreatePost({ onClose, onPostCreated }) {
           <div className="flex items-center justify-center gap-3">
             <button
               type="button"
-              onClick={() => setCropZoom(Math.max(1, cropZoom - 0.1))}
-              className={`p-2 rounded-lg transition ${theme === 'dark' ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
+              onClick={() => {
+                const newZoom = Math.max(1, cropZoom - 0.1);
+                setCropZoom(newZoom);
+                // Reset offset if zoom is at minimum
+                if (newZoom === 1) setCropOffset({ x: 0, y: 0 });
+              }}
+              disabled={cropZoom <= 1}
+              className={`p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark' ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
               aria-label="Zoom out"
             >
               <ZoomOut size={16} />
@@ -226,14 +242,20 @@ export default function CreatePost({ onClose, onPostCreated }) {
                 max="3"
                 step="0.1"
                 value={cropZoom}
-                onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                onChange={(e) => {
+                  const newZoom = parseFloat(e.target.value);
+                  setCropZoom(newZoom);
+                  // Reset offset if zoom is at minimum
+                  if (newZoom === 1) setCropOffset({ x: 0, y: 0 });
+                }}
                 className="w-full"
               />
             </div>
             <button
               type="button"
               onClick={() => setCropZoom(Math.min(3, cropZoom + 0.1))}
-              className={`p-2 rounded-lg transition ${theme === 'dark' ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
+              disabled={cropZoom >= 3}
+              className={`p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark' ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-200 hover:bg-gray-300'}`}
               aria-label="Zoom in"
             >
               <ZoomIn size={16} />

@@ -62,7 +62,8 @@ export const selectListFields = (item, type = 'post') => {
       branch: item.branch,
       batch: item.batch,
       upvotes: item.upvotes || [],
-      downvotes: item.downvotes || []
+      downvotes: item.downvotes || [],
+      Discussion: item.Discussion || [] 
     };
   }
 
@@ -122,9 +123,9 @@ export const decodeCursor = (cursor) => {
 export const createPaginationResult = (items, pageSize) => {
   // If we got less than pageSize items, we've reached the end
   const hasMore = items.length >= pageSize;
-  
+
   // The cursor for the NEXT page is based on the last item
-  const nextCursor = hasMore && items.length > 0 
+  const nextCursor = hasMore && items.length > 0
     ? createCursor(items[items.length - 1])
     : null;
 
