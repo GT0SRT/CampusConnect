@@ -65,7 +65,7 @@ export default function Home() {
   const { prefetchNextPage } = usePrefetchFeed();
 
   // Get cache invalidation functions
-  const { invalidateFeed } = useInvalidateCache();
+  const { invalidateFeed, invalidateThreads } = useInvalidateCache();
 
   // Ref for infinite scroll sentinel
   const { ref: bottomRef, inView } = useInView({
@@ -133,6 +133,10 @@ export default function Home() {
    */
   const handlePostCreated = async () => {
     await invalidateFeed();
+  };
+
+  const handleThreadCreated = async () => {
+    await invalidateThreads();
   };
 
   return (
@@ -204,6 +208,7 @@ export default function Home() {
         <CreateModal
           onClose={() => setIsModalOpen(false)}
           onPostCreated={handlePostCreated}
+          onThreadCreated={handleThreadCreated}
         />
       )}
     </div>

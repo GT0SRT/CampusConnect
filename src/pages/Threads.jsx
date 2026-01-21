@@ -113,6 +113,14 @@ export default function Threads() {
    * 2. Send to database
    * 3. If fails, revert vote and show error
    */
+  /**
+   * Handle thread creation
+   * Invalidates cache so fresh data refetches automatically
+   */
+  const handleThreadCreated = async () => {
+    await invalidateThreads();
+  };
+
   const handleVote = async (threadId, voteType) => {
     if (votingThreads[threadId] || !user?.uid) return;
 

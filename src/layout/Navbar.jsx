@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense } from "react";
 import { useUserStore } from "../store/useUserStore";
 import { Plus, Handshake } from "lucide-react";
+import { useInvalidateCache } from "../hooks/useLayeredData";
 
 // Lazy load modal to reduce initial bundle size
 const CreateModal = lazy(() => import("../components/modals/CreateModal"));
@@ -8,6 +9,15 @@ const CreateModal = lazy(() => import("../components/modals/CreateModal"));
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const theme = useUserStore((state) => state.theme);
+  const { invalidateFeed, invalidateThreads } = useInvalidateCache();
+
+  const handlePostCreated = async () => {
+    await invalidateFeed();
+  };
+
+  const handleThreadCreated = async () => {
+    await invalidateThreads();
+  };
 
   return (
     <>
@@ -57,7 +67,11 @@ export default function Navbar() {
       {/* Create Modal */}
       {open && (
         <Suspense fallback={null}>
-          <CreateModal onClose={() => setOpen(false)} />
+          <CreateModal
+            onClose={() => setOpen(false)}
+            onPostCreated={handlePostCreated}
+            onThreadCreated={handleThreadCreated}
+          />
         </Suspense>
       )}
     </>

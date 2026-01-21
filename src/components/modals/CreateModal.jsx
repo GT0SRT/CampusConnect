@@ -3,7 +3,7 @@ import { useUserStore } from "../../store/useUserStore";
 import CreatePost from "./CreatePost";
 import CreateThread from "./CreateThread";
 
-export default function CreateModal({ onClose, onPostCreated }) {
+export default function CreateModal({ onClose, onPostCreated, onThreadCreated }) {
   const [type, setType] = useState("post");
   const theme = useUserStore((state) => state.theme);
 
@@ -21,8 +21,8 @@ export default function CreateModal({ onClose, onPostCreated }) {
               key={t}
               onClick={() => setType(t)}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 capitalize ${type === t
-                  ? `${theme === 'dark' ? 'bg-gray-800 text-blue-400 shadow-sm' : 'bg-white text-blue-600 shadow-sm'}`
-                  : `${theme === 'dark' ? 'text-gray-300 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`
+                ? `${theme === 'dark' ? 'bg-gray-800 text-blue-400 shadow-sm' : 'bg-white text-blue-600 shadow-sm'}`
+                : `${theme === 'dark' ? 'text-gray-300 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`
                 }`}
             >
               {t}
@@ -33,7 +33,7 @@ export default function CreateModal({ onClose, onPostCreated }) {
         {type === "post" ? (
           <CreatePost onClose={onClose} onPostCreated={onPostCreated} />
         ) : (
-          <CreateThread onClose={onClose} onThreadCreated={onPostCreated} />
+          <CreateThread onClose={onClose} onThreadCreated={onThreadCreated || onPostCreated} />
         )}
       </div>
     </div>
