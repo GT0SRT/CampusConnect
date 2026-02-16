@@ -18,6 +18,7 @@ import PostDetailModal from "../components/modals/PostDetailsModal";
 import EditProfileModal from "../components/modals/EditProfileModal";
 import { calculateUserKarma } from "../services/karmaService";
 import { getOptimizedImageUrl } from "../utils/imageOptimizer";
+import MatchmakerSection from "../components/profile/MatchmakerSection";
 
 const tabs = ["Posts", "Threads", "Saved", "Settings"];
 
@@ -565,6 +566,9 @@ export default function Profile() {
             onToggle={toggleTheme}
           />
           <Toggle label="Private Account" isOn={false} onToggle={() => { }} />
+          <div className="pt-4 border-t">
+            <MatchmakerSection userProfile={user} />
+          </div>
           <div className={`pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
             <button
               onClick={handleLogout}
@@ -611,18 +615,20 @@ function Stat({ label, value }) {
 function Toggle({ label, isOn, onToggle }) {
   const theme = useUserStore((state) => state.theme);
   return (
-    <div className="flex justify-between items-center">
-      <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>{label}</p>
-      <button
-        onClick={onToggle}
-        className={`w-12 h-6 rounded-full relative transition-all duration-300 ${isOn ? "bg-blue-600" : "bg-gray-200"
-          }`}
-      >
-        <div
-          className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${isOn ? "left-[26px]" : "left-0.5"
+    <>
+      <div className="flex justify-between items-center">
+        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>{label}</p>
+        <button
+          onClick={onToggle}
+          className={`w-12 h-6 rounded-full relative transition-all duration-300 ${isOn ? "bg-blue-600" : "bg-gray-200"
             }`}
-        ></div>
-      </button>
-    </div>
+        >
+          <div
+            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${isOn ? "left-6.5" : "left-0.5"
+              }`}
+          ></div>
+        </button>
+      </div>
+    </>
   );
 }
