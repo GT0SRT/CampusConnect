@@ -89,7 +89,7 @@ export default function Matchmaker() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-12 px-6">
+    <div className="min-h-screen bg-linear-to-b from-gray-50 to-gray-100 py-12 px-6">
 
       {/* Header */}
       <div className="max-w-xl mx-auto mb-10 text-center">
@@ -102,7 +102,7 @@ export default function Matchmaker() {
       </div>
 
       {/* Swipe Stack */}
-      <div className="relative w-full max-w-md mx-auto h-[540px]">
+      <div className="relative w-full max-w-md mx-auto h-135">
 
         {matches.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center text-gray-500">
