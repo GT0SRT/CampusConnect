@@ -18,6 +18,10 @@ const Profile = lazy(() => {
   console.log('[Route] Loading Profile page...')
   return import("./pages/Profile")
 });
+const Matchmaker = lazy(() => {
+  console.log('[Route] Loading Matchmaker page...')
+  return import("./pages/Matchmaker")
+});
 const ThreadView = lazy(() => {
   console.log('[Route] Loading ThreadView page...')
   return import("./pages/ThreadView")
@@ -51,6 +55,7 @@ function App() {
         <Route path="/" element={<Suspense fallback={<PageLoader />}><Home /></Suspense>} />
         <Route path="/threads" element={<Suspense fallback={<PageLoader />}><Threads /></Suspense>} />
         <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
+        <Route path="/matchmaker" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />
         <Route path="/threads/:thread_id" element={<Suspense fallback={<PageLoader />}><ThreadView /></Suspense>} />
       </Route>
     </Routes>
