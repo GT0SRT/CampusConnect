@@ -1,16 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ChevronUp, ChevronDown, MessageCircle, Zap, Trash2, MoreVertical, Bookmark } from "lucide-react";
-import { getAuth } from "firebase/auth";
 import { deleteThread } from "../../services/threadService";
 import { useUserStore } from "../../store/useUserStore";
 import { getOptimizedImageUrl } from "../../utils/imageOptimizer";
 
 export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDeleted }) {
   const navigate = useNavigate();
-  const auth = getAuth();
-  const currentUser = auth.currentUser;
   const { user: userData, updateUser } = useUserStore();
+  const currentUser = userData;
   const theme = useUserStore((state) => state.theme);
   const [isSaved, setIsSaved] = useState(userData?.savedThreads?.includes(thread.id) || false);
   const authorName = typeof thread.author === "object" ? thread.author.name : thread.author;
@@ -86,11 +84,17 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
     return (
       <div
         onClick={handleCardClick}
-        className={`${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-lg p-4 hover:border-blue-400 hover:shadow-md transition cursor-pointer`}
+        className={`rounded-lg p-4 transition-all duration-300 cursor-pointer ${theme === 'dark'
+            ? 'bg-slate-900/60 border border-slate-700/50 backdrop-blur-xl hover:border-cyan-500/30'
+            : 'bg-white/60 border border-gray-200/50 backdrop-blur-xl hover:border-cyan-400/50'
+          }`}
       >
         <div className="flex items-start gap-4">
           {/* Vote column */}
-          <div className={`vote-buttons flex flex-col items-center gap-2 rounded-lg px-2 py-2 border shrink-0 ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`vote-buttons flex flex-col items-center gap-2 rounded-lg px-2 py-2 border shrink-0 transition-all ${theme === 'dark'
+              ? 'bg-slate-800/60 border-slate-700/50'
+              : 'bg-gray-100/50 border-gray-200/50'
+            }`}>
             <button
               onClick={(e) => handleVote("up", e)}
               disabled={votingUp}
@@ -151,9 +155,15 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
 
   // Detailed view
   return (
-    <div className={`${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-xl overflow-hidden transition-colors`}>
+    <div className={`rounded-xl overflow-hidden transition-all duration-300 ${theme === 'dark'
+        ? 'bg-slate-900/60 border border-slate-700/50 backdrop-blur-xl'
+        : 'bg-white/60 border border-gray-200/50 backdrop-blur-xl'
+      }`}>
       {/* Author Profile Section */}
-      <div className={`px-6 py-5 border-b relative ${theme === 'dark' ? 'border-gray-700 bg-gradient-to-r from-blue-900/20 to-purple-900/20' : 'border-gray-200 bg-white'}`}>
+      <div className={`px-6 py-5 border-b relative transition-colors ${theme === 'dark'
+          ? 'border-slate-700/50 bg-slate-900/40'
+          : 'border-gray-200/50 bg-linear-to-r from-cyan-50/50 to-blue-50/50'
+        }`}>
         <div className="flex items-center gap-4">
           {authorPic && (
             <img
@@ -221,7 +231,10 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
         </div>
       </div>
       {/* Stats */}
-      <div className={`px-6 py-4 border-t  ${theme === 'dark' ? 'border-gray-700 bg-gradient-to-r from-gray-700 to-gray-700' : 'border-gray-200 bg-white'} flex items-center justify-between`}>
+      <div className={`px-6 py-4 border-t transition-colors ${theme === 'dark'
+          ? 'border-slate-700/50 bg-slate-900/40'
+          : 'border-gray-200/50 bg-white/40'
+        } flex items-center justify-between`}>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <MessageCircle size={18} className="text-blue-600" />

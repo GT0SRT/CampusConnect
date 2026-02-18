@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
 import { useUserStore } from "../store/useUserStore";
 import TalentCard from "../components/matchmaker/TalentCard";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
+import { mockUsers } from "../data/mockData";
+
+const MOCK_USERS = mockUsers.map(user => ({
+  uid: user.uid,
+  name: user.name,
+  campus: user.campus,
+  branch: user.branch,
+  batch: user.batch,
+  openToConnect: true,
+  interests: user.interests || [],
+  lookingFor: ["Study Partner", "Collaboration"],
+}));
 
 export default function Matchmaker() {
   const { user } = useUserStore();
@@ -35,48 +45,34 @@ export default function Matchmaker() {
   useEffect(() => {
     if (!user?.uid) return;
 
-    const fetchUsers = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "users"));
+    const maxScore = 5 * 5 + 4 * 3 + 3 + 2;
 
-        const usersData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+    const filtered = MOCK_USERS
+      .filter((u) => u.uid !== user.uid && u.openToConnect === true)
+      .map((u) => {
+        const { score, commonInterests, commonLookingFor } = calculateScore(user, u);
 
-        const maxScore = 5 * 5 + 4 * 3 + 3 + 2;
+        const compatibilityPercent = Math.min(
+          Math.round((score / maxScore) * 100),
+          100
+        );
 
-        const filtered = usersData
-          .filter(
-            (u) => u.uid !== user.uid && u.openToConnect === true
-          )
-          .map((u) => {
-            const { score, commonInterests, commonLookingFor } =
-              calculateScore(user, u);
+        return {
+          ...u,
+          compatibilityScore: score,
+          compatibilityPercent,
+          commonInterests,
+          commonLookingFor,
+        };
+      })
+      .filter((u) => u.compatibilityScore > 0)
+      .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
 
-            const compatibilityPercent = Math.min(
-              Math.round((score / maxScore) * 100),
-              100
-            );
+    const timer = setTimeout(() => {
+      setMatches(filtered);
+    }, 0);
 
-            return {
-              ...u,
-              compatibilityScore: score,
-              compatibilityPercent,
-              commonInterests,
-              commonLookingFor
-            };
-          })
-          .filter((u) => u.compatibilityScore > 0)
-          .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
-
-        setMatches(filtered);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
-
-    fetchUsers();
+    return () => clearTimeout(timer);
   }, [user]);
 
   const handleSwipe = (direction) => {
@@ -89,7 +85,7 @@ export default function Matchmaker() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-12 px-6">
+    <div className="min-h-screen from-gray-50 to-gray-100 py-4 px-4">
 
       {/* Header */}
       <div className="max-w-xl mx-auto mb-10 text-center">

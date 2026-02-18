@@ -1,12 +1,16 @@
 import { X } from "lucide-react";
 import PostCard from "../feed/PostCard";
 
+import { useUserStore } from "../../store/useUserStore";
+
 export default function PostDetailModal({ post, onClose }) {
+  const theme = useUserStore((state) => state.theme);
   if (!post) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <button 
+    <div className={`fixed inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4 ${theme === 'dark' ? 'bg-black/60' : 'bg-black/40'
+      }`}>
+      <button
         onClick={onClose}
         className="absolute top-5 right-5 text-white/70 hover:text-white transition"
       >

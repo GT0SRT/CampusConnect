@@ -6,6 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 
 function CommentsModal({ postId, onClose }) {
   const { user } = useUserStore();
+  const theme = useUserStore((state) => state.theme);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
@@ -126,7 +127,7 @@ function CommentsModal({ postId, onClose }) {
                       {comment.createdAt?.seconds ? formatDistanceToNow(new Date(comment.createdAt.seconds * 1000), { addSuffix: false }) : "now"}
                     </span>
                     <button
-                      onClick={() => initiateReply(comment.id, comment.author.name)}
+                      onClick={() => initiateReply(comment.id, comment.author?.name)}
                       aria-label={`Reply to ${comment.author?.name}'s comment`}
                       className="text-xs font-semibold text-gray-600 hover:text-gray-900"
                     >
@@ -140,8 +141,8 @@ function CommentsModal({ postId, onClose }) {
                       {/* 1. The "View replies" Toggle Line */}
                       {!expandedThreads[comment.id] ? (
                         <div className="flex items-center gap-3 my-2 group cursor-pointer" onClick={() => toggleThread(comment.id)}>
-                          <div className="h-[1px] w-8 bg-gray-300 group-hover:bg-gray-400"></div>
-                          <span className="text-xs font-semibold text-gray-500 group-hover:text-gray-700">
+                          <div className={`h-px w-8 ${theme === 'dark' ? 'bg-slate-500 group-hover:bg-slate-400' : 'bg-gray-300 group-hover:bg-gray-400'}`}></div>
+                          <span className={`text-xs font-semibold ${theme === 'dark' ? 'text-slate-500 group-hover:text-slate-400' : 'text-slate-500 group-hover:text-slate-700'}`}>
                             View {comment.replies.length} more replies
                           </span>
                         </div>
@@ -157,7 +158,7 @@ function CommentsModal({ postId, onClose }) {
                                   {/* Auto-highlight the @Username if present */}
                                   <span className="text-sm text-gray-800 leading-snug">
                                     {reply.text.split(" ").map((word, i) =>
-                                      word.startsWith("@") ? <span key={i} className="text-blue-600 mr-1">{word}</span> : word + " "
+                                      word.startsWith("@") ? <span key={i} className="text-blue-600 mr-1">{word}</span> : <span key={i}>{word} </span>
                                     )}
                                   </span>
                                 </div>
@@ -167,7 +168,7 @@ function CommentsModal({ postId, onClose }) {
                                     Reply
                                   </span>
                                   <button
-                                    onClick={() => initiateReply(comment.id, reply.author.name)}
+                                    onClick={() => initiateReply(comment.id, reply.author?.name)}
                                     aria-label={`Reply to ${reply.author?.name}'s comment`}
                                     className="text-xs font-semibold text-gray-600 hover:text-gray-900"
                                   >
@@ -180,8 +181,8 @@ function CommentsModal({ postId, onClose }) {
 
                           {/* Hide Button */}
                           <div className="flex items-center gap-3 mt-2 cursor-pointer" onClick={() => toggleThread(comment.id)}>
-                            <div className="h-[1px] w-8 bg-gray-300"></div>
-                            <span className="text-xs font-semibold text-gray-400">Hide replies</span>
+                            <div className={`h-px w-8 ${theme === 'dark' ? 'bg-slate-500 hover:bg-slate-400' : 'bg-gray-300 hover:bg-gray-400'}`}></div>
+                            <span className={`text-xs font-semibold ${theme === 'dark' ? 'text-slate-500 hover:text-slate-400' : 'text-slate-400'}`}>Hide replies</span>
                           </div>
                         </div>
                       )}
@@ -199,21 +200,37 @@ function CommentsModal({ postId, onClose }) {
         </div>
 
         {/* Input Footer */}
-        <div className="p-3 border-t bg-white flex items-center gap-3">
-          <img src={user?.profile_pic} className="w-8 h-8 rounded-full bg-gray-200 border border-gray-200" />
-          <form onSubmit={handleCommentSubmit} className="flex-1 flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2 border border-transparent focus-within:border-gray-300 transition">
+        <div className={`p-3 border-t transition-all ${theme === 'dark'
+            ? 'bg-slate-900/60 border-slate-700/50'
+            : 'bg-white/60 border-gray-200/50'
+          } flex items-center gap-3`}>
+          <img src={user?.profile_pic} className={`w-8 h-8 rounded-full border ${theme === 'dark' ? 'bg-slate-700 border-slate-600' : 'bg-gray-100 border-gray-200'
+            }`} />
+          <form onSubmit={handleCommentSubmit} className={`flex-1 flex items-center gap-2 rounded-full px-4 py-2 border transition ${theme === 'dark'
+              ? 'bg-slate-800/60 border-slate-700/50 focus-within:border-cyan-500/50'
+              : 'bg-gray-100/60 border-gray-200/50 focus-within:border-cyan-500/50'
+            }`}>
             <input
               id="comment-input"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder={replyingTo ? `Replying to ${replyingTo.username}...` : "Add a comment..."}
-              className="flex-1 bg-transparent border-none text-sm focus:ring-0 outline-none placeholder:text-gray-500"
+              className={`flex-1 bg-transparent border-none text-sm focus:ring-0 outline-none ${theme === 'dark'
+                  ? 'text-slate-100 placeholder:text-slate-400'
+                  : 'text-slate-900 placeholder:text-slate-500'
+                }`}
               autoComplete="off"
             />
             {replyingTo && (
-              <button type="button" onClick={() => { setReplyingTo(null); setNewComment(""); }} aria-label="Cancel reply" className="text-xs font-bold text-gray-600 hover:text-gray-900">X</button>
+              <button type="button" onClick={() => { setReplyingTo(null); setNewComment(""); }} aria-label="Cancel reply" className={`text-xs font-bold transition ${theme === 'dark'
+                  ? 'text-slate-500 hover:text-slate-400'
+                  : 'text-slate-600 hover:text-slate-900'
+                }`}>X</button>
             )}
-            <button type="submit" disabled={!newComment.trim()} className="text-blue-600 font-semibold text-sm disabled:opacity-50 hover:text-blue-700">
+            <button type="submit" disabled={!newComment.trim()} className={`text-sm font-semibold disabled:opacity-50 transition ${theme === 'dark'
+                ? 'text-cyan-400 hover:text-cyan-300'
+                : 'text-cyan-600 hover:text-cyan-700'
+              }`}>
               Post
             </button>
           </form>

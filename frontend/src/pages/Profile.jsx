@@ -1,30 +1,23 @@
-import { useState, useEffect } from "react";
-import { signOut, onAuthStateChanged } from "firebase/auth";
-import {
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  orderBy,
-} from "firebase/firestore";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
-import { auth, db } from "../firebase";
 import { getPostsByIds } from "../services/postService";
-import { getUserThreads } from "../services/threadService";
+import { getUserThreads, getThreadsByIds } from "../services/threadService";
 import PostDetailModal from "../components/modals/PostDetailsModal";
 import EditProfileModal from "../components/modals/EditProfileModal";
 import { calculateUserKarma } from "../services/karmaService";
 import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 import MatchmakerSection from "../components/profile/MatchmakerSection";
 
-const tabs = ["Posts", "Threads", "Saved", "Settings"];
+const tabs = ["Posts", "Threads", "Saved", "Preferences"];
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, setUser, updateUser, clearUser, theme, toggleTheme } = useUserStore();
+  const { user, updateUser, theme } = useUserStore();
+  const userId = user?.uid;
+  const userKarmaCount = user?.karmaCount ?? 0;
+  const savedPostIds = useMemo(() => user?.savedPosts ?? [], [user?.savedPosts]);
+  const savedThreadIds = useMemo(() => user?.savedThreads ?? [], [user?.savedThreads]);
   const [active, setActive] = useState("Posts");
   const [isEditing, setIsEditing] = useState(false);
   const [myPosts, setMyPosts] = useState([]);
@@ -45,118 +38,61 @@ export default function Profile() {
   }, [user]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        let currentUserData = user;
-        if (!currentUserData) {
-          try {
-            const docRef = doc(db, "users", currentUser.uid);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-              currentUserData = { uid: currentUser.uid, ...docSnap.data() };
-              setUser(currentUserData);
-            }
-          } catch (error) {
-            console.error("Error fetching profile:", error);
-          }
-        }
-
-        if (currentUserData) {
-          try {
-            const postsQuery = query(
-              collection(db, "posts"),
-              where("uid", "==", currentUser.uid),
-              orderBy("createdAt", "desc")
-            );
-            const querySnapshot = await getDocs(postsQuery);
-            const postsData = querySnapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }));
-            setMyPosts(postsData);
-          } catch (error) {
-            console.error("Error fetching user posts:", error);
-          }
-
-          try {
-            const threads = await getUserThreads(currentUser.uid);
-            setMyThreads(threads);
-          } catch (error) {
-            console.error("Error fetching user threads:", error);
-          }
-
-          try {
-            const totalKarma = await calculateUserKarma(currentUser.uid);
-            setKarma(totalKarma);
-            updateUser({ karmaCount: totalKarma });
-          } catch (err) {
-            console.error("Error calculating karma:", err);
-          }
-
-          if (
-            currentUserData.savedPosts &&
-            currentUserData.savedPosts.length > 0
-          ) {
-            try {
-              const saved = await getPostsByIds(currentUserData.savedPosts);
-              setSavedPosts(saved);
-            } catch (error) {
-              console.error("Error fetching saved posts:", error);
-            }
-          } else {
-            setSavedPosts([]);
-          }
-
-          if (
-            currentUserData.savedThreads &&
-            currentUserData.savedThreads.length > 0
-          ) {
-            try {
-              const { getThreadsByIds } = await import(
-                "../services/threadService"
-              );
-              const saved = await getThreadsByIds(currentUserData.savedThreads);
-              setSavedThreads(saved);
-            } catch (error) {
-              console.error("Error fetching saved threads:", error);
-            }
-          } else {
-            setSavedThreads([]);
-          }
-        }
-      } else {
+    const loadProfileData = async () => {
+      if (!userId) {
         navigate("/auth");
+        return;
       }
-    });
 
-    return () => unsubscribe();
-  }, [navigate, setUser]);
+      try {
+        const mySavedPosts = savedPostIds;
+        const mySavedThreads = savedThreadIds;
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      clearUser();
-      navigate("/auth");
-    } catch (err) {
-      console.error("Logout error:", err);
-    }
-  };
+        const [threads, karmaValue, savedPostData, savedThreadData] = await Promise.all([
+          getUserThreads(userId),
+          calculateUserKarma(userId),
+          mySavedPosts.length > 0 ? getPostsByIds(mySavedPosts) : Promise.resolve([]),
+          mySavedThreads.length > 0 ? getThreadsByIds(mySavedThreads) : Promise.resolve([]),
+        ]);
+
+        setMyPosts(savedPostData);
+        setMyThreads(threads || []);
+        setSavedPosts(savedPostData || []);
+        setSavedThreads(savedThreadData || []);
+
+        const karmaCount = typeof karmaValue === "number" ? karmaValue : karmaValue?.total || 0;
+        setKarma(karmaCount);
+        if (userKarmaCount !== karmaCount) {
+          updateUser({ karmaCount });
+        }
+      } catch (error) {
+        console.error("Error loading profile data:", error);
+      }
+    };
+
+    loadProfileData();
+  }, [navigate, updateUser, userId, userKarmaCount, savedPostIds, savedThreadIds]);
 
   if (!user) return null;
 
   return (
     <div
-      className={`min-h-screen space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-20 ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"
+      className={`min-h-screen space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-20 transition-colors ${theme === "dark" ? "bg-transparent" : "bg-transparent"
         }`}
     >
       {/* Header */}
-      <div className={`rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 relative shadow-sm ${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-100'}`}>
+      <div className={`rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 relative shadow-sm backdrop-blur-xl border transition-colors ${theme === 'dark'
+        ? 'bg-slate-900/60 border-slate-700/50'
+        : 'bg-white/60 border-gray-200/50'
+        }`}>
         {/* Edit Button */}
         <button
           onClick={() => setIsEditing((prev) => !prev)}
           aria-label={isEditing ? "Cancel editing profile" : "Edit profile"}
-          className={`absolute top-4 right-4 text-xs border px-3 py-1.5 rounded-full font-medium transition ${theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-200' : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-600'}`}>
+          className={`absolute top-4 right-4 text-xs border px-3 py-1.5 rounded-full font-medium transition ${theme === 'dark'
+            ? 'bg-cyan-500/20 hover:bg-cyan-500/30 border-cyan-500/50 text-cyan-400'
+            : 'bg-cyan-100/50 hover:bg-cyan-200/50 border-cyan-200/50 text-cyan-700'
+            }`}>
           {isEditing ? "Cancel" : "Edit Profile"}
         </button>
 
@@ -171,17 +107,20 @@ export default function Profile() {
           alt={`${user.name || "User"}'s profile picture`}
           width="96"
           height="96"
-          className="w-24 h-24 rounded-full object-cover bg-gray-200 border-4 border-white shadow-sm"
+          className={`w-24 h-24 rounded-full object-cover border-4 shadow-lg ${theme === 'dark'
+            ? 'border-slate-800 bg-slate-800'
+            : 'border-gray-100 bg-gray-100'
+            }`}
         />
 
         {/* User Details */}
         <div className="flex-1 text-center md:text-left ">
-          <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{user.name}</h2>
-          <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>{user.name}</h2>
+          <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
             {user.campus || "No Campus"} · {user.branch || "General"} ·{" "}
             {user.batch || "202X"}
           </p>
-          <p className={`text-sm mt-3 italic max-w-md ${theme === 'dark' ? 'text-gray-300' : 'text-black'}`}>
+          <p className={`text-sm mt-3 italic max-w-md ${theme === 'dark' ? 'text-slate-300' : 'text-slate-900'}`}>
             {user.bio || "No bio yet."}
           </p>
 
@@ -198,7 +137,10 @@ export default function Profile() {
       </div>
 
       {/* Tabs */}
-      <div className={`flex gap-2 p-1 rounded-xl w-fit overflow-x-auto ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}`}>
+      <div className={`flex gap-2 p-1 rounded-xl w-fit overflow-x-auto backdrop-blur-lg transition-colors ${theme === 'dark'
+        ? 'bg-slate-900/40 border border-slate-700/30'
+        : 'bg-white/40 border border-gray-200/30'
+        }`}>
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -206,8 +148,12 @@ export default function Profile() {
             aria-label={`View ${tab.toLowerCase()}`}
             aria-current={active === tab ? 'page' : undefined}
             className={`px-5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${active === tab
-              ? theme === 'dark' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-black shadow-sm'
-              : theme === 'dark' ? 'text-gray-300 hover:text-gray-100' : 'text-gray-500 hover:text-gray-700'
+              ? theme === 'dark'
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
+                : 'bg-cyan-100/50 text-cyan-700 border border-cyan-200/50 shadow-lg shadow-cyan-500/15'
+              : theme === 'dark'
+                ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/30'
               }`}
           >
             {tab}
@@ -241,7 +187,10 @@ export default function Profile() {
               </div>
             ))
           ) : (
-            <div className={`col-span-3 text-center py-12 rounded-xl border border-dashed ${theme === 'dark' ? 'bg-gray-800 border-gray-600 text-gray-400' : 'bg-white border-gray-300 text-gray-400'}`}>
+            <div className={`col-span-3 text-center py-12 rounded-xl border border-dashed backdrop-blur-sm transition-colors ${theme === 'dark'
+              ? 'bg-slate-900/40 border-slate-700/30 text-slate-400'
+              : 'bg-white/40 border-gray-200/30 text-gray-400'
+              }`}>
               <p>No posts yet</p>
             </div>
           )}
@@ -256,28 +205,40 @@ export default function Profile() {
               <div
                 key={thread.id}
                 onClick={() => navigate(`/threads/${thread.id}`)}
-                className={`rounded-xl p-5 border hover:border-blue-400 hover:shadow-md transition cursor-pointer group ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+                className={`rounded-xl p-5 border hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 transition cursor-pointer group backdrop-blur-sm ${theme === 'dark'
+                  ? 'bg-slate-900/60 border-slate-700/50'
+                  : 'bg-white/60 border-gray-200/50'
+                  }`}
               >
                 <div className="flex items-start gap-4">
                   {/* Category Badge */}
-                  <div className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs font-semibold rounded-full">
+                  <div className="px-3 py-1 bg-linear-to-r from-cyan-500 to-cyan-600 text-white text-xs font-semibold rounded-full shadow-lg shadow-cyan-500/20">
                     {thread.category || "General"}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     {/* Title */}
-                    <h3 className={`text-lg font-bold mb-2 group-hover:text-blue-600 transition ${theme === 'dark' ? 'text-white' : 'text-black'}`}>
+                    <h3 className={`text-lg font-bold mb-2 group-hover:text-cyan-400 transition ${theme === 'dark'
+                      ? 'text-slate-100'
+                      : 'text-slate-900'
+                      }`}>
                       {thread.title}
                     </h3>
 
                     {/* Description */}
                     <div
-                      className={`text-sm line-clamp-2 mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
+                      className={`text-sm line-clamp-2 mb-3 ${theme === 'dark'
+                        ? 'text-slate-300'
+                        : 'text-slate-600'
+                        }`}
                       dangerouslySetInnerHTML={{ __html: thread.description }}
                     />
 
                     {/* Meta Info */}
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className={`flex items-center gap-4 text-xs ${theme === 'dark'
+                      ? 'text-slate-400'
+                      : 'text-slate-500'
+                      }`}>
                       <span className="flex items-center gap-1">
                         <svg
                           className="w-4 h-4"
@@ -352,21 +313,29 @@ export default function Profile() {
       {active === "Saved" && (
         <div>
           {/* Filter Buttons */}
-          <div className="flex gap-3 mb-6 ">
+          <div className="flex gap-3 mb-6">
             <button
               onClick={() => setSavedFilter("posts")}
               className={`px-6 py-2 rounded-xl font-semibold transition-all ${savedFilter === "posts"
-                ? "bg-blue-600 text-white shadow"
-                : theme === 'dark' ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? theme === 'dark'
+                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
+                  : 'bg-cyan-100/50 text-cyan-700 border border-cyan-200/50 shadow-lg shadow-cyan-500/15'
+                : theme === 'dark'
+                  ? 'bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:bg-slate-700/60'
+                  : 'bg-white/60 border border-gray-200/50 text-gray-700 hover:bg-gray-100/60'
                 }`}
             >
               Posts ({savedPosts.length})
             </button>
             <button
               onClick={() => setSavedFilter("threads")}
-              className={`px-6 py-2 rounded-xl font-semibold transition-all${savedFilter === "threads"
-                ? "bg-blue-600 text-white shadow"
-                : theme === 'dark' ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              className={`px-6 py-2 rounded-xl font-semibold transition-all ${savedFilter === "threads"
+                ? theme === 'dark'
+                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
+                  : 'bg-cyan-100/50 text-cyan-700 border border-cyan-200/50 shadow-lg shadow-cyan-500/15'
+                : theme === 'dark'
+                  ? 'bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:bg-slate-700/60'
+                  : 'bg-white/60 border border-gray-200/50 text-gray-700 hover:bg-gray-100/60'
                 }`}
             >
               Threads ({savedThreads.length})
@@ -435,7 +404,10 @@ export default function Profile() {
                 ))}
               </div>
             ) : (
-              <div className={`text-center py-12 rounded-xl border border-dashed ${theme === 'dark' ? 'bg-gray-800 border-gray-600 text-gray-400' : 'bg-white border-gray-300 text-gray-400'}`}>
+              <div className={`text-center py-12 rounded-xl border border-dashed backdrop-blur-sm transition-colors ${theme === 'dark'
+                ? 'bg-slate-900/40 border-slate-700/30 text-slate-400'
+                : 'bg-white/40 border-gray-200/30 text-gray-400'
+                }`}>
                 <p>No saved posts</p>
               </div>
             ))}
@@ -447,23 +419,35 @@ export default function Profile() {
                 {savedThreads.map((thread) => (
                   <div
                     key={thread.id}
-                    className={`rounded-xl p-5 border hover:border-blue-400 hover:shadow-md transition group ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+                    className={`rounded-xl p-5 border hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 transition group backdrop-blur-sm ${theme === 'dark'
+                      ? 'bg-slate-900/60 border-slate-700/50'
+                      : 'bg-white/60 border-gray-200/50'
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div
                         className="flex-1 min-w-0 cursor-pointer"
                         onClick={() => navigate(`/threads/${thread.id}`)}
                       >
-                        <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-white group-hover:text-blue-400' : 'text-gray-900 group-hover:text-blue-600'} transition mb-2`}>
+                        <h3 className={`text-lg font-bold ${theme === 'dark'
+                          ? 'text-slate-100 group-hover:text-cyan-400'
+                          : 'text-slate-900 group-hover:text-cyan-700'
+                          } transition mb-2`}>
                           {thread.title}
                         </h3>
                         <div
-                          className="text-sm text-gray-600 line-clamp-2 mb-3"
+                          className={`text-sm line-clamp-2 mb-3 ${theme === 'dark'
+                            ? 'text-slate-300'
+                            : 'text-slate-600'
+                            }`}
                           dangerouslySetInnerHTML={{
                             __html: thread.description,
                           }}
                         />
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className={`flex items-center gap-4 text-xs ${theme === 'dark'
+                          ? 'text-slate-400'
+                          : 'text-slate-500'
+                          }`}>
                           <span className="flex items-center gap-1">
                             <svg
                               className="w-4 h-4"
@@ -534,69 +518,53 @@ export default function Profile() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
-                <p className="text-gray-400">No saved threads</p>
+              <div className={`text-center py-12 rounded-xl border border-dashed backdrop-blur-sm transition-colors ${theme === 'dark'
+                ? 'bg-slate-900/40 border-slate-700/30 text-slate-400'
+                : 'bg-white/40 border-gray-200/30 text-gray-400'
+                }`}>
+                <p>No saved threads</p>
               </div>
             ))}
         </div>
-      )}
+      )
+      }
 
-      {/* 4. SETTINGS TAB (WITH EMAIL) */}
-      {active === "Settings" && (
-        <div className={`rounded-xl p-6 space-y-6 border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-          <h3 className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>Account</h3>
-
-          {/* Email Display */}
-          <div>
-            <label className={`text-xs font-semibold uppercase tracking-wide ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-              Email
-            </label>
-            <div className={`mt-1 p-3 rounded-lg text-sm font-medium border ${theme === 'dark' ? 'bg-gray-700 text-gray-200 border-gray-600' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-              {user.email}
-            </div>
-            <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
-              Email cannot be changed.
-            </p>
-          </div>
-
-          <h3 className={`font-bold pt-4 border-t ${theme === 'dark' ? 'text-white border-gray-700' : 'text-black border-gray-100'}`}>Preferences</h3>
-          <Toggle
-            label="Dark Mode"
-            isOn={theme === "dark"}
-            onToggle={toggleTheme}
-          />
-          <Toggle label="Private Account" isOn={false} onToggle={() => { }} />
-          <div className="pt-4 border-t">
+      {/* 4. PREFERENCES TAB (MATCH PREFERENCES) */}
+      {
+        active === "Preferences" && (
+          <div className={`rounded-xl p-6 space-y-6 border backdrop-blur-xl transition-colors ${theme === 'dark'
+            ? 'bg-slate-900/60 border-slate-700/50'
+            : 'bg-white/60 border-gray-200/50'
+            }`}>
+            <h3 className={`font-bold text-lg ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
+              Match Preferences
+            </h3>
             <MatchmakerSection userProfile={user} />
           </div>
-          <div className={`pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
-            <button
-              onClick={handleLogout}
-              className="text-red-600 text-sm font-semibold flex items-center gap-2"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      )}
+        )
+      }
 
       {/* POST DETAIL MODAL */}
-      {selectedPost && (
-        <PostDetailModal
-          post={selectedPost}
-          onClose={() => setSelectedPost(null)}
-        />
-      )}
+      {
+        selectedPost && (
+          <PostDetailModal
+            post={selectedPost}
+            onClose={() => setSelectedPost(null)}
+          />
+        )
+      }
 
       {/* EDIT PROFILE MODAL */}
-      {isEditing && (
-        <EditProfileModal
-          user={user}
-          onClose={() => setIsEditing(false)}
-          onUpdate={(updatedData) => updateUser(updatedData)}
-        />
-      )}
-    </div>
+      {
+        isEditing && (
+          <EditProfileModal
+            user={user}
+            onClose={() => setIsEditing(false)}
+            onUpdate={(updatedData) => updateUser(updatedData)}
+          />
+        )
+      }
+    </div >
   );
 }
 
@@ -604,8 +572,8 @@ function Stat({ label, value }) {
   const theme = useUserStore((state) => state.theme);
   return (
     <div className="text-center">
-      <p className={`font-bold text-lg ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{value}</p>
-      <p className={`text-xs uppercase tracking-wider font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+      <p className={`font-bold text-lg ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>{value}</p>
+      <p className={`text-xs uppercase tracking-wider font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
         {label}
       </p>
     </div>
@@ -617,15 +585,18 @@ function Toggle({ label, isOn, onToggle }) {
   return (
     <>
       <div className="flex justify-between items-center">
-        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>{label}</p>
+        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{label}</p>
         <button
           onClick={onToggle}
-          className={`w-12 h-6 rounded-full relative transition-all duration-300 ${isOn ? "bg-blue-600" : "bg-gray-200"
+          className={`w-12 h-6 rounded-full relative transition-all duration-300 ${isOn
+            ? 'bg-linear-to-r from-cyan-500 to-cyan-600 shadow-lg shadow-cyan-500/20'
+            : theme === 'dark'
+              ? 'bg-slate-700/60'
+              : 'bg-gray-200/60'
             }`}
         >
           <div
-            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${isOn ? "left-6.5" : "left-0.5"
-              }`}
+            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${isOn ? "left-6.5" : "left-0.5"}`}
           ></div>
         </button>
       </div>

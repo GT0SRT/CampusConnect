@@ -1,206 +1,154 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useInView } from "react-intersection-observer";
+import { useState, useEffect } from "react";
 import CreateModal from "../components/modals/CreateModal";
 import FeedTabs from "../components/feed/FeedTabs";
 import PostCard from "../components/feed/PostCard";
-import { PostSkeleton, LoadingPagination, PaginationError } from "../components/common/SkeletonLoaders";
-import { useLayeredFeed, usePrefetchFeed, useInvalidateCache } from "../hooks/useLayeredData";
+import { PostSkeleton } from "../components/common/SkeletonLoaders";
 import { useUserStore } from "../store/useUserStore";
-
-/**
- * HOME PAGE WITH OPTIMIZED DATA LOADING
- * 
- * CRITICAL IMPROVEMENTS:
- * 
- * 1. CURSOR-BASED PAGINATION
- *    - Replaces offset-based approach that fetches all data upfront
- *    - Only 10 items per page instead of everything at once
- *    - Stable across insertions/deletions (no duplicates or missing items)
- * 
- * 2. LAYERED LOADING (3 phases):
- *    - PHASE 1: Skeleton renders immediately (feel responsive)
- *    - PHASE 2: Fetch minimal post fields from first page (feel fast)
- *    - PHASE 3: Full details load in background (feel complete)
- * 
- * 3. REACT QUERY CACHING
- *    - 5-minute stale time for social feed data
- *    - Back-button navigation doesn't refetch
- *    - Auto-refresh on window focus
- *    - Seamless infinite scroll pagination
- * 
- * 4. TAB FILTERING
- *    - Filtering happens CLIENT-SIDE on already-fetched data
- *    - No extra queries for each tab switch
- *    - Instant tab switching after first load
- * 
- * PERFORMANCE METRICS BEFORE/AFTER:
- * - Before: ~500ms fetch all posts + ~200ms render with all data
- * - After:  ~50ms show skeleton + ~150ms show first 10 posts = ~200ms perceived
- * - User sees content ~150ms faster (3x improvement)
- */
+import { getPaginatedFeed } from "../services/postService";
 
 export default function Home() {
-  // State for modal
+  const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Tab selection for filtering
   const [activeTab, setActiveTab] = useState("Global");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalPosts, setTotalPosts] = useState(0);
+  const { user, theme } = useUserStore();
+  const POSTS_PER_PAGE = 5;
 
-  // User data for filtering
-  const { user } = useUserStore();
-
-  // LAYER 1 + 2: Fetch paginated feed using React Query
-  // Returns: data (all pages), isLoading (first page), isFetching (next page)
-  const {
-    data,
-    isLoading,
-    error,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-    refetch
-  } = useLayeredFeed(10); // 10 items per page
-
-  // Setup prefetching for smooth scrolling
-  const { prefetchNextPage } = usePrefetchFeed();
-
-  // Get cache invalidation functions
-  const { invalidateFeed, invalidateThreads } = useInvalidateCache();
-
-  // Ref for infinite scroll sentinel
-  const { ref: bottomRef, inView } = useInView({
-    threshold: 0.1,
-    rootMargin: "100px", // Start fetching 100px before bottom
-  });
-
-  // Trigger next page fetch when user scrolls to bottom
+  // Fetch posts on tab change
   useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
+    setPosts([]);
+    setCurrentPage(1);
+    fetchPosts(1);
+  }, [activeTab]);
+
+  const fetchPosts = async (page = 1) => {
+    try {
+      if (page === 1) setIsLoading(true);
+      else setIsLoadingMore(true);
+
+      setError(null);
+
+      // Backend pagination call (replace with real API endpoint later)
+      // const response = await fetch(`/api/posts?page=${page}&limit=${POSTS_PER_PAGE}&category=${activeTab.toLowerCase()}`);
+      // const data = await response.json();
+      const data = await getPaginatedFeed(page, POSTS_PER_PAGE);
+
+      if (page === 1) {
+        setPosts(data.data);
+      } else {
+        setPosts(prev => [...prev, ...data.data]);
+      }
+      setCurrentPage(page);
+      setHasMore(data.hasMore);
+      setTotalPosts(data.total);
+    } catch (err) {
+      console.error("Error fetching posts:", err);
+      setError(err.message || "Failed to load posts");
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
     }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  /**
-   * Flatten paginated data structure into single array
-   * React Query returns data as: { pages: [{ items }, { items }] }
-   * This flattens it for easier rendering
-   */
-  const allPosts = useMemo(() => {
-    if (!data) return [];
-    return data.pages.flatMap(page => page.items);
-  }, [data]);
-
-  /**
-   * CLIENT-SIDE FILTERING by tab
-   * This is intentionally client-side because:
-   * 1. User has already loaded data for all tabs
-   * 2. Switching tabs should be instant (no network request)
-   * 3. Firebase queries can't easily do OR with multiple fields efficiently
-   * 4. Filtering small dataset client-side is faster than network round-trip
-   * 
-   * If you have MASSIVE datasets, consider server-side filtering,
-   * but for this social app it's overkill.
-   */
-  const filteredPosts = useMemo(() => {
-    return allPosts.filter((post) => {
-      // Global tab shows all posts
-      if (activeTab === "Global") return true;
-
-      // Other tabs require user to be logged in and have the field
-      if (!user) return false;
-
-      // Filter by user's campus/branch/batch
-      if (activeTab === "Campus") {
-        return post.campus?.toLowerCase() === user.campus?.toLowerCase();
-      }
-
-      if (activeTab === "Branch") {
-        return post.branch?.toLowerCase() === user.branch?.toLowerCase();
-      }
-
-      if (activeTab === "Batch") {
-        return post.batch === user.batch;
-      }
-
-      return false;
-    });
-  }, [allPosts, activeTab, user]);
-
-  /**
-   * Handle successful post creation
-   * Invalidates cache so fresh data refetches automatically
-   * React Query calls the query function again in background
-   */
-  const handlePostCreated = async () => {
-    await invalidateFeed();
   };
 
-  const handleThreadCreated = async () => {
-    await invalidateThreads();
+  const loadMorePosts = () => {
+    if (!isLoadingMore && hasMore) {
+      fetchPosts(currentPage + 1);
+    }
+  };
+
+  const handlePostCreated = async () => {
+    // Refetch posts from first page after creation
+    await fetchPosts(1);
   };
 
   return (
-    <div className="space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-40">
+    <div className={`space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-40 transition-colors ${theme === 'dark' ? 'bg-transparent' : 'bg-transparent'
+      }`}>
       <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="space-y-6">
-        {/* PHASE 1: SKELETON LOADING (Critical) */}
-        {isLoading && (
-          <PostSkeleton count={2} />
+        {/* Loading State */}
+        {isLoading && <PostSkeleton count={2} />}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <div className={`rounded-xl p-6 border backdrop-blur-xl transition-colors ${theme === 'dark'
+            ? 'bg-red-500/10 border-red-500/30 text-red-300'
+            : 'bg-red-50/60 border-red-200/50 text-red-700'
+            }`}>
+            <p className="font-medium mb-2">Error Loading Posts</p>
+            <p className="text-sm mb-4">{error}</p>
+            <button
+              onClick={() => fetchPosts()}
+              className="px-4 py-2 rounded-lg bg-linear-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 transition text-sm font-medium"
+            >
+              Try Again
+            </button>
+          </div>
         )}
 
-        {/* ERROR STATE: Show if fetch fails */}
-        {error && (
-          <PaginationError
-            error={error}
-            onRetry={() => refetch()}
-          />
-        )}
-
-        {/* PHASE 2: RENDER PAGINATED POSTS (Primary) */}
-        {!isLoading && filteredPosts.length > 0 ? (
-          filteredPosts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-            // Note: PostCard will handle PHASE 3 (secondary data enrichment)
-            // via usePostDetails hook internally when needed
-            />
-          ))
-        ) : (
-          !isLoading && (
-            <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-200">
-              <p className="text-gray-500 font-medium">No posts found in {activeTab}</p>
-              {activeTab !== "Global" && (
-                <p className="text-xs text-gray-400 mt-1">
-                  (Showing posts for {activeTab}: {user?.[activeTab.toLowerCase()] || "N/A"})
-                </p>
-              )}
+        {/* Posts List */}
+        {!isLoading && posts.length > 0 ? (
+          <>
+            {posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onPostDeleted={() => fetchPosts(1)}
+                isPriority={posts.indexOf(post) < 3}
+              />
+            ))}
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="flex justify-center pt-6 pb-12">
+                <button
+                  onClick={loadMorePosts}
+                  disabled={isLoadingMore}
+                  className={`px-6 py-3 rounded-full font-medium transition-all flex items-center gap-2 ${theme === 'dark'
+                      ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 border border-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed'
+                      : 'bg-cyan-100/50 text-cyan-700 hover:bg-cyan-100/70 border border-cyan-200/50 disabled:opacity-50 disabled:cursor-not-allowed'
+                    }`}
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    `Load More (${posts.length}/${totalPosts})`
+                  )}
+                </button>
+              </div>
+            )}
+          </>
+        ) : !isLoading && !error ? (
+          <div className={`rounded-xl p-12 border border-dashed backdrop-blur-sm transition-colors ${theme === 'dark'
+            ? 'bg-slate-900/40 border-slate-700/30'
+            : 'bg-white/40 border-gray-200/30'
+            }`}>
+            <p className={`text-center font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-gray-600'}`}>
+              No posts found in {activeTab}
+            </p>
+            {activeTab !== "Global" && (
+              <p className={`text-center text-xs mt-2 ${theme === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>
+                (Showing posts for {activeTab}: {user?.[activeTab.toLowerCase()] || "N/A"})
+              </p>
+            )}
+            <div className="text-center mt-4">
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="mt-4 text-blue-600 text-sm font-semibold hover:underline"
+                className="text-cyan-500 text-sm font-semibold hover:text-cyan-400 transition"
               >
                 Create the first one!
               </button>
             </div>
-          )
-        )}
-
-        {/* INFINITE SCROLL SENTINEL */}
-        {/* When this element enters viewport, triggers fetchNextPage */}
-        <div ref={bottomRef} className="h-6" />
-
-        {/* PHASE 2+: LOADING INDICATOR for next page */}
-        {isFetchingNextPage && (
-          <LoadingPagination />
-        )}
-
-        {/* End of pagination indicator */}
-        {!hasNextPage && allPosts.length > 0 && (
-          <div className="text-center py-6 text-gray-400 text-sm">
-            You've reached the end!
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Create Post Modal */}
@@ -208,7 +156,6 @@ export default function Home() {
         <CreateModal
           onClose={() => setIsModalOpen(false)}
           onPostCreated={handlePostCreated}
-          onThreadCreated={handleThreadCreated}
         />
       )}
     </div>

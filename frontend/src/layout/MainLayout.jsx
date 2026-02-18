@@ -1,7 +1,6 @@
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import RightPanel from "./RightPannel";
-import MobileNav from "./MobileNav";
 import { Outlet } from "react-router-dom";
 import { useEffect, useMemo, lazy, Suspense } from "react";
 import { useUserStore } from "../store/useUserStore";
@@ -29,7 +28,7 @@ function MainLayout() {
       <div className="h-screen flex flex-col">
         <Navbar />
 
-        <div className="flex-1 max-w-7xl mx-auto w-full grid grid-cols-12 gap-6 px-4 py-4 overflow-hidden">
+        <div className="flex-1 max-w-7xl mx-auto w-full grid grid-cols-12 gap-6 px-4 py-6 overflow-auto [&::-webkit-scrollbar]:hidden">
           <aside className="col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden">
             <Sidebar />
           </aside>
@@ -43,7 +42,6 @@ function MainLayout() {
           </aside>
         </div>
 
-        <MobileNav />
         <Suspense fallback={null}>
           <GeminiBot />
         </Suspense>

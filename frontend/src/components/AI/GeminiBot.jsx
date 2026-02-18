@@ -164,19 +164,20 @@ const GeminiBot = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-16 md:bottom-4 right-4 w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-xl flex items-center justify-center hover:scale-110 transition-all z-50"
+          className="fixed bottom-3 md:bottom-4 right-4 w-16 h-16 bg-linear-to-r from-cyan-500 to-cyan-600 rounded-full shadow-xl shadow-cyan-500/30 flex items-center justify-center hover:scale-110 transition-all z-50"
         >
-          <MessageCircle className={`w-7 h-7 ${theme === 'dark' ? 'text-gray-900' : 'text-white'}`} />
+          <MessageCircle className="w-7 h-7 text-white" />
         </button>
       )}
 
       {/* Chat Window */}
       {isOpen && (
-        <div className={`fixed bottom-4 right-4 w-[320px] sm:w-[360px]
-            h-[70vh] max-h-[580px] ${theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-white'} rounded-3xl shadow-2xl
-            flex flex-col z-50 border`}>
+        <div className={`fixed bottom-4 right-4 w-[320px] sm:w-[360px] h-[70vh] max-h-[580px] rounded-3xl shadow-2xl flex flex-col z-50 backdrop-blur-xl border transition-colors ${theme === 'dark'
+            ? 'bg-slate-900/80 border-slate-700/50 text-white'
+            : 'bg-white/80 border-gray-200/50 text-slate-900'
+          }`}>
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-t-3xl flex justify-between items-center">
+          <div className="bg-linear-to-r from-cyan-500 to-cyan-600 text-white p-4 rounded-t-3xl flex justify-between items-center shadow-lg shadow-cyan-500/20">
             <div className="flex items-center gap-2">
               <Sparkles />
               <h3 className="font-semibold">AI Assistant</h3>
@@ -187,7 +188,10 @@ const GeminiBot = () => {
           </div>
 
           {/* Messages */}
-          <div className={`flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden p-3 ${theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-gray-50'}`}>
+          <div className={`flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden p-3 transition-colors ${theme === 'dark'
+              ? 'bg-slate-800/50'
+              : 'bg-gray-50/50'
+            }`}>
             {messages.map((msg, i) => (
               <ChatBubble key={i} message={msg} isUser={msg.isUser} />
             ))}
@@ -212,24 +216,32 @@ const GeminiBot = () => {
               disabled={isLoading}
             />
 
-            <div className="flex gap-2">              <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-              className={`p-2 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark' ? 'bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200'}`}
-              title="Upload image"
-            >
-              <Paperclip size={18} />
-            </button>              <input
+            <div className="flex gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+                className={`p-2 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark'
+                    ? 'bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:bg-slate-700/60'
+                    : 'bg-gray-100/60 border border-gray-200/50 text-gray-600 hover:bg-gray-200/60'
+                  }`}
+                title="Upload image"
+              >
+                <Paperclip size={18} />
+              </button>
+              <input
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Ask me anything..."
-                className={`flex-1 border rounded-xl px-3 py-2 text-sm ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-200 bg-white text-gray-900'}`}
+                className={`flex-1 border rounded-xl px-3 py-2 text-sm backdrop-blur-md transition-colors ${theme === 'dark'
+                    ? 'bg-slate-800/60 border-slate-700/50 text-white placeholder-slate-400 focus:border-cyan-500/50'
+                    : 'bg-white/60 border-gray-200/50 text-gray-900 placeholder-gray-500 focus:border-cyan-400/50'
+                  }`}
               />
               <button
                 onClick={handleSendMessage}
                 disabled={isLoading}
-                className="bg-blue-500 text-white px-3 rounded-xl hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-linear-to-r from-cyan-500 to-cyan-600 text-white px-3 rounded-xl hover:from-cyan-600 hover:to-cyan-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20"
               >
                 {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
               </button>

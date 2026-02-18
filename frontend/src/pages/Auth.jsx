@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, googleProvider, db } from '../firebase';
-import { signInWithPopup, signInWithRedirect, getRedirectResult, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { Mail, Lock, ArrowRight, Handshake, Sparkles } from 'lucide-react';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useUserStore } from '../store/useUserStore';
 
 const Auth = () => {
@@ -12,87 +9,15 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [checking, setChecking] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { setUser } = useUserStore();
+  const { setUser, user } = useUserStore();
 
-  const ensureUserProfile = async (uid, email) => {
-    const userRef = doc(db, 'users', uid);
-    const snap = await getDoc(userRef);
-    if (!snap.exists()) {
-      const defaults = {
-        uid,
-        email,
-        name: '',
-        bio: '',
-        campus: '',
-        branch: '',
-        batch: '',
-        profile_pic: '',
-        postsCount: 0,
-        threadsCount: 0,
-        karmaCount: 0,
-        savedPosts: [],
-        savedThreads: [],
-        createdAt: serverTimestamp(),
-      };
-      await setDoc(userRef, defaults);
-      return defaults;
-    }
-    return { uid, email, ...snap.data() };
-  };
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user && user.emailVerified) {
-        try {
-          const userData = await ensureUserProfile(user.uid, user.email);
-          setUser(userData);
-          navigate('/', { replace: true });
-
-        } catch (err) {
-          console.error("Error fetching user data:", err);
-        }
-      }
-      setChecking(false);
-    });
-
-    return () => unsubscribe();
-  }, [navigate, setUser]);
-
-  // Handle Google redirect result to support environments blocking third-party cookies/popups
-  useEffect(() => {
-    (async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-          const userData = await ensureUserProfile(result.user.uid, result.user.email);
-          setUser(userData);
-          navigate('/', { replace: true });
-        }
-      } catch (err) {
-        // Common errors: popup/redirect blocked, cookies disabled, user cancelled
-        if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-          console.log('User cancelled sign-in');
-        } else {
-          console.error('Google Redirect Error:', err.code, err.message);
-          setError(`Sign-in failed: ${err.message}`);
-        }
-      }
-    })();
-  }, [navigate, setUser]);
-
-  if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-          <span className="text-sm text-gray-600 font-medium">Loading...</span>
-        </div>
-      </div>
-    );
-  }
+  // useEffect(() => {
+  //   if (user?.email) {
+  //     navigate('/home', { replace: true });
+  //   }
+  // }, [user, navigate]);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -101,23 +26,23 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      if (isLogin) {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const userData = await ensureUserProfile(userCredential.user.uid, userCredential.user.email);
-        setUser(userData);
-        navigate('/');
-      } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(userCredential.user);
-        await signOut(auth);
+      await new Promise((resolve) => setTimeout(resolve, 700));
 
-        setMessage("Verification link sent to your email! Please verify and log in.");
-        setIsLogin(true);
-        setEmail('');
-        setPassword('');
+      if (!email || !password) {
+        setError('Please enter email and password.');
+        return;
       }
-    } catch (err) {
-      setError(err.message.replace('Firebase:', '').trim());
+
+      const localUser = {
+        uid: `local-${Date.now()}`,
+        email,
+        name: email.split('@')[0] || 'Campus User',
+      };
+
+      setUser(localUser);
+      navigate('/home', { replace: true });
+    } catch {
+      setError('Unable to continue. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -127,103 +52,110 @@ const Auth = () => {
     setError('');
     setIsLoading(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      if (result?.user) {
-        const userData = await ensureUserProfile(result.user.uid, result.user.email);
-        setUser(userData);
-        navigate('/', { replace: true });
-      }
-    } catch (err) {
-      if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/popup-closed-by-user') {
-        try {
-          await signInWithRedirect(auth, googleProvider);
-        } catch (redirectErr) {
-          console.error('Google Redirect Error:', redirectErr);
-          setError('Google Sign-In failed. Please try again.');
-        }
-      } else {
-        console.error('Google Sign-In Error:', err);
-        setError('Google Sign-In failed. Please try again.');
-      }
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setUser({
+        uid: `local-google-${Date.now()}`,
+        email: 'google-user@campusconnect.local',
+        name: 'Google User',
+      });
+      navigate('/home', { replace: true });
+    } catch {
+      setError('Google Sign-In failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-screen min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-y-auto overflow-x-hidden px-4 py-8 [&::-webkit-scrollbar]:hidden">
-      {/* Decorative elements */}
-      <div className="fixed top-10 left-10 w-72 h-72 bg-blue-300/30 rounded-full blur-3xl pointer-events-none -z-10"></div>
-      <div className="fixed bottom-10 right-10 w-96 h-96 bg-purple-300/30 rounded-full blur-3xl pointer-events-none -z-10"></div>
+    <div className="w-screen min-h-screen bg-slate-950 relative overflow-y-auto overflow-x-hidden px-4 py-8 [&::-webkit-scrollbar]:hidden">
+      {/* Decorative glowing orbs */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute left-1/2 top-1/4 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-[120px]" />
+        <div className="absolute right-1/4 bottom-1/3 h-[300px] w-[300px] rounded-full bg-sky-500/10 blur-[100px]" />
+      </div>
+      <div className="absolute inset-0 bg-slate-950/30 z-0" />
 
-      <div className="w-full flex flex-col items-center justify-center gap-6">
-        <div className="w-full max-w-md relative z-10">
+      <div className="w-full flex flex-col items-center justify-center gap-6 relative z-10">
+        <div className="w-full max-w-md">
           {/* Auth Card */}
-          <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+          <div className="bg-slate-900/40 border border-slate-800/60 rounded-2xl shadow-2xl p-8 backdrop-blur-xl">
 
             <div className="flex flex-col items-center mb-4">
-              <Handshake className="w-8 h-8" />
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-cyan-200 bg-clip-text text-transparent mb-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500 transition-transform group-hover:scale-110">
+                <Handshake className="h-5 w-5 text-slate-50" />
+              </div>
+              <h1 className="text-3xl font-bold text-white mb-2">
                 Campus Connect
               </h1>
-              <p className="text-gray-600 text-sm">
-                {isLogin ? 'Welcome back! Sign in to continue' : 'Join our community today'}
+              <p className="text-slate-400 text-sm">
+                {isLogin ? 'Welcome back! Continue to campus connect' : 'Join our AI Powered Campus Community'}
               </p>
             </div>
 
             <form onSubmit={handleAuth} className="space-y-4">
               {message && (
-                <div className="bg-green-50 border border-green-200 text-green-700 text-sm p-3 rounded-xl">
+                <div className="bg-green-900/20 border border-green-700 text-green-300 text-sm p-3 rounded-xl">
                   {message}
                 </div>
               )}
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded-xl">
+                <div className="bg-red-900/20 border border-red-700 text-red-300 text-sm p-3 rounded-xl">
                   {error}
                 </div>
               )}
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                  <label className="block text-sm font-semibold text-slate-50 mb-2">Email</label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                     <input
                       type="email"
                       placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full bg-gray-50 border-2 border-gray-200 text-gray-900 pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all placeholder-gray-400"
+                      className="w-full bg-slate-800 border-2 border-slate-700 text-slate-50 pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-slate-700 transition-all placeholder-slate-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                  <label className="block text-sm font-semibold text-slate-50 mb-2">Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                     <input
                       type="password"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full bg-gray-50 border-2 border-gray-200 text-gray-900 pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all placeholder-gray-400"
+                      className="w-full bg-slate-800 border-2 border-slate-700 text-slate-50 pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-slate-700 transition-all placeholder-slate-500"
                     />
                   </div>
+                  {isLogin && (
+                    <div className="mr-0 mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setMessage('Password reset link sent to your email.')}
+                        className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-slate-950 font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <div className="w-5 h-5 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin"></div>
                     Processing...
                   </>
                 ) : (
@@ -238,10 +170,10 @@ const Auth = () => {
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200"></div>
+                  <div className="w-full border-t border-slate-700"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500 font-medium">Or continue with</span>
+                  <span className="px-4 bg-slate-900/40 text-slate-400 font-medium">Or continue with</span>
                 </div>
               </div>
 
@@ -249,14 +181,14 @@ const Auth = () => {
                 onClick={handleGoogleLogin}
                 type="button"
                 disabled={isLoading}
-                className="mt-6 w-full bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-6 w-full bg-slate-800 border-2 border-slate-700 hover:border-slate-600 hover:bg-slate-700 text-slate-50 font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google logo" width="20" height="20" />
                 Continue with Google
               </button>
             </div>
 
-            <p className="text-center mt-6 text-sm text-gray-600">
+            <p className="text-center mt-6 text-sm text-slate-400">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button
                 type="button"
@@ -265,7 +197,7 @@ const Auth = () => {
                   setError('');
                   setMessage('');
                 }}
-                className="font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                className="font-bold text-cyan-400 hover:text-cyan-300 hover:underline transition-colors"
               >
                 {isLogin ? 'Sign Up' : 'Sign In'}
               </button>
@@ -274,7 +206,7 @@ const Auth = () => {
 
           {/* Footer */}
           <div className="mt-8 text-center">
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-slate-500">
               By continuing, you agree to our Terms & Privacy Policy
             </p>
           </div>
