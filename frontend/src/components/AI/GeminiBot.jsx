@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Loader2, Sparkles, Paperclip } from 'lucide-react';
 import ChatBubble from './ChatBubble';
-import { useGemini } from '../../hooks/useGemini';
 import { useUserStore } from '../../store/useUserStore';
+import { chatWithGemini, generateCaptionFromImageFile } from '../../services/geminiService';
+import { uploadImageToCloudinary, validateImageFile } from '../../services/cloudinaryService';
 
 const GeminiBot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -20,43 +21,22 @@ const GeminiBot = () => {
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
-
-  const { isLoading, generateCaption, chat } = useGemini();
-
-  // Upload to Cloudinary
-  const uploadToCloudinary = async (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_PRESET);
-
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
-      { method: 'POST', body: formData }
-    );
-
-    if (!response.ok) throw new Error('Upload failed');
-    const data = await response.json();
-    return data.secure_url;
-  };
+  const [isLoading, setIsLoading] = useState(false);
 
   // Handle file selection
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Image size should be less than 10MB');
+    const validation = validateImageFile(file, 10);
+    if (!validation.valid) {
+      alert(validation.message);
       return;
     }
 
     try {
-      const imageUrl = await uploadToCloudinary(file);
-      await handleImageUpload(imageUrl);
+      const imageUrl = await uploadImageToCloudinary(file);
+      await handleImageUpload(imageUrl, file);
     } catch (error) {
       alert('Failed to upload image. Please try again.');
     }
@@ -70,7 +50,7 @@ const GeminiBot = () => {
   }, [messages]);
 
   // image upload handler
-  const handleImageUpload = async (imageUrl) => {
+  const handleImageUpload = async (imageUrl, file) => {
     setMessages((prev) => [
       ...prev,
       {
@@ -85,7 +65,8 @@ const GeminiBot = () => {
     ]);
 
     try {
-      const caption = await generateCaption(imageUrl);
+      setIsLoading(true);
+      const caption = await generateCaptionFromImageFile(file);
       setMessages((prev) => [
         ...prev,
         {
@@ -109,6 +90,8 @@ const GeminiBot = () => {
           })
         }
       ]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -131,7 +114,8 @@ const GeminiBot = () => {
     ]);
 
     try {
-      const response = await chat(text);
+      setIsLoading(true);
+      const response = await chatWithGemini(text);
       setMessages((prev) => [
         ...prev,
         {
@@ -155,6 +139,8 @@ const GeminiBot = () => {
           })
         }
       ]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -172,9 +158,9 @@ const GeminiBot = () => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className={`fixed bottom-4 right-4 w-[320px] sm:w-[360px] h-[70vh] max-h-[580px] rounded-3xl shadow-2xl flex flex-col z-50 backdrop-blur-xl border transition-colors ${theme === 'dark'
-            ? 'bg-slate-900/80 border-slate-700/50 text-white'
-            : 'bg-white/80 border-gray-200/50 text-slate-900'
+        <div className={`fixed bottom-4 right-4 w-80 sm:w-90 h-[70vh] max-h-145 rounded-3xl shadow-2xl flex flex-col z-50 backdrop-blur-xl border transition-colors ${theme === 'dark'
+          ? 'bg-slate-900/80 border-slate-700/50 text-white'
+          : 'bg-white/80 border-gray-200/50 text-slate-900'
           }`}>
           {/* Header */}
           <div className="bg-linear-to-r from-cyan-500 to-cyan-600 text-white p-4 rounded-t-3xl flex justify-between items-center shadow-lg shadow-cyan-500/20">
@@ -189,8 +175,8 @@ const GeminiBot = () => {
 
           {/* Messages */}
           <div className={`flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden p-3 transition-colors ${theme === 'dark'
-              ? 'bg-slate-800/50'
-              : 'bg-gray-50/50'
+            ? 'bg-slate-800/50'
+            : 'bg-gray-50/50'
             }`}>
             {messages.map((msg, i) => (
               <ChatBubble key={i} message={msg} isUser={msg.isUser} />
@@ -221,8 +207,8 @@ const GeminiBot = () => {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isLoading}
                 className={`p-2 rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark'
-                    ? 'bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:bg-slate-700/60'
-                    : 'bg-gray-100/60 border border-gray-200/50 text-gray-600 hover:bg-gray-200/60'
+                  ? 'bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:bg-slate-700/60'
+                  : 'bg-gray-100/60 border border-gray-200/50 text-gray-600 hover:bg-gray-200/60'
                   }`}
                 title="Upload image"
               >
@@ -234,8 +220,8 @@ const GeminiBot = () => {
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Ask me anything..."
                 className={`flex-1 border rounded-xl px-3 py-2 text-sm backdrop-blur-md transition-colors ${theme === 'dark'
-                    ? 'bg-slate-800/60 border-slate-700/50 text-white placeholder-slate-400 focus:border-cyan-500/50'
-                    : 'bg-white/60 border-gray-200/50 text-gray-900 placeholder-gray-500 focus:border-cyan-400/50'
+                  ? 'bg-slate-800/60 border-slate-700/50 text-white placeholder-slate-400 focus:border-cyan-500/50'
+                  : 'bg-white/60 border-gray-200/50 text-gray-900 placeholder-gray-500 focus:border-cyan-400/50'
                   }`}
               />
               <button

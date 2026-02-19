@@ -1,605 +1,101 @@
-import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { useUserStore } from "../store/useUserStore";
-import { getPostsByIds } from "../services/postService";
-import { getUserThreads, getThreadsByIds } from "../services/threadService";
+import { useNavigate, useParams } from "react-router-dom";
+import ProfileDashboard from "../components/profile/ProfileDashboard";
+import { ProfilePostCard } from "../components/profile/components/ProfilePostCard";
+import { ProfileThreadCard } from "../components/profile/components/ProfileThreadCard";
 import PostDetailModal from "../components/modals/PostDetailsModal";
 import EditProfileModal from "../components/modals/EditProfileModal";
-import { calculateUserKarma } from "../services/karmaService";
-import { getOptimizedImageUrl } from "../utils/imageOptimizer";
-import MatchmakerSection from "../components/profile/MatchmakerSection";
-
-const tabs = ["Posts", "Threads", "Saved", "Preferences"];
+import { useProfileController } from "../hooks/useProfileController";
 
 export default function Profile() {
-  const navigate = useNavigate();
-  const { user, updateUser, theme } = useUserStore();
-  const userId = user?.uid;
-  const userKarmaCount = user?.karmaCount ?? 0;
-  const savedPostIds = useMemo(() => user?.savedPosts ?? [], [user?.savedPosts]);
-  const savedThreadIds = useMemo(() => user?.savedThreads ?? [], [user?.savedThreads]);
-  const [active, setActive] = useState("Posts");
-  const [isEditing, setIsEditing] = useState(false);
-  const [myPosts, setMyPosts] = useState([]);
-  const [myThreads, setMyThreads] = useState([]);
-  const [savedPosts, setSavedPosts] = useState([]);
-  const [savedThreads, setSavedThreads] = useState([]);
-  const [selectedPost, setSelectedPost] = useState(null);
-  const [savedFilter, setSavedFilter] = useState("posts");
-  const [karma, setKarma] = useState(0);
-  const [userProfilePic, setUserProfilePic] = useState('');
+    const navigate = useNavigate();
+    const { uid: routeUid } = useParams();
 
-  useEffect(() => {
-    if (user && user.profile_pic) {
-      const originalUrl = user.profile_pic;
-      const processedUrl = getOptimizedImageUrl(originalUrl.slice(0, -3) + "webp", 'profile-large');
-      setUserProfilePic(processedUrl);
+    const {
+        user,
+        theme,
+        isMe,
+        viewedUser,
+        profileData,
+        collections,
+        selectedPost,
+        setSelectedPost,
+        isEditing,
+        setIsEditing,
+        isLoading,
+        isRefreshing,
+        error,
+        reloadProfile,
+        handleRemoveSavedPost,
+        handleRemoveSavedThread,
+        updateUser,
+    } = useProfileController(routeUid);
+
+    if (!viewedUser || !profileData) {
+        return null;
     }
-  }, [user]);
 
-  useEffect(() => {
-    const loadProfileData = async () => {
-      if (!userId) {
-        navigate("/auth");
-        return;
-      }
-
-      try {
-        const mySavedPosts = savedPostIds;
-        const mySavedThreads = savedThreadIds;
-
-        const [threads, karmaValue, savedPostData, savedThreadData] = await Promise.all([
-          getUserThreads(userId),
-          calculateUserKarma(userId),
-          mySavedPosts.length > 0 ? getPostsByIds(mySavedPosts) : Promise.resolve([]),
-          mySavedThreads.length > 0 ? getThreadsByIds(mySavedThreads) : Promise.resolve([]),
-        ]);
-
-        setMyPosts(savedPostData);
-        setMyThreads(threads || []);
-        setSavedPosts(savedPostData || []);
-        setSavedThreads(savedThreadData || []);
-
-        const karmaCount = typeof karmaValue === "number" ? karmaValue : karmaValue?.total || 0;
-        setKarma(karmaCount);
-        if (userKarmaCount !== karmaCount) {
-          updateUser({ karmaCount });
-        }
-      } catch (error) {
-        console.error("Error loading profile data:", error);
-      }
-    };
-
-    loadProfileData();
-  }, [navigate, updateUser, userId, userKarmaCount, savedPostIds, savedThreadIds]);
-
-  if (!user) return null;
-
-  return (
-    <div
-      className={`min-h-screen space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-20 transition-colors ${theme === "dark" ? "bg-transparent" : "bg-transparent"
-        }`}
-    >
-      {/* Header */}
-      <div className={`rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 relative shadow-sm backdrop-blur-xl border transition-colors ${theme === 'dark'
-        ? 'bg-slate-900/60 border-slate-700/50'
-        : 'bg-white/60 border-gray-200/50'
-        }`}>
-        {/* Edit Button */}
-        <button
-          onClick={() => setIsEditing((prev) => !prev)}
-          aria-label={isEditing ? "Cancel editing profile" : "Edit profile"}
-          className={`absolute top-4 right-4 text-xs border px-3 py-1.5 rounded-full font-medium transition ${theme === 'dark'
-            ? 'bg-cyan-500/20 hover:bg-cyan-500/30 border-cyan-500/50 text-cyan-400'
-            : 'bg-cyan-100/50 hover:bg-cyan-200/50 border-cyan-200/50 text-cyan-700'
-            }`}>
-          {isEditing ? "Cancel" : "Edit Profile"}
-        </button>
-
-        {/* Profile Pic */}
-        <img
-          src={
-            userProfilePic ||
-            `${import.meta.env.VITE_AVATAR_API_URL}?name=${encodeURIComponent(
-              user.name || "User"
-            )}&background=random&size=150`
-          }
-          alt={`${user.name || "User"}'s profile picture`}
-          width="96"
-          height="96"
-          className={`w-24 h-24 rounded-full object-cover border-4 shadow-lg ${theme === 'dark'
-            ? 'border-slate-800 bg-slate-800'
-            : 'border-gray-100 bg-gray-100'
-            }`}
-        />
-
-        {/* User Details */}
-        <div className="flex-1 text-center md:text-left ">
-          <h2 className={`text-xl font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>{user.name}</h2>
-          <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-            {user.campus || "No Campus"} · {user.branch || "General"} ·{" "}
-            {user.batch || "202X"}
-          </p>
-          <p className={`text-sm mt-3 italic max-w-md ${theme === 'dark' ? 'text-slate-300' : 'text-slate-900'}`}>
-            {user.bio || "No bio yet."}
-          </p>
-
-          <div className="flex justify-center md:justify-start gap-6 mt-5">
-            <Stat label="Posts" value={myPosts.length || 0} />
-            <Stat label="Threads" value={myThreads.length || 0} />
-            <Stat
-              label="Saved"
-              value={savedPosts.length + savedThreads.length || 0}
+    return (
+        <div className="min-h-screen pb-20">
+            <ProfileDashboard
+                isMe={isMe}
+                profile={profileData}
+                theme={theme}
+                posts={collections.posts}
+                threads={collections.threads}
+                savedPosts={collections.savedPosts}
+                savedThreads={collections.savedThreads}
+                isLoading={isLoading}
+                isRefreshing={isRefreshing}
+                error={error}
+                onRetry={reloadProfile}
+                onEditProfile={() => setIsEditing(true)}
+                onConnect={() => console.log("Connect clicked")}
+                onMessage={() => console.log("Message clicked")}
+                renderPost={(post) => (
+                    <ProfilePostCard
+                        post={post}
+                        theme={theme}
+                        onOpen={setSelectedPost}
+                    />
+                )}
+                renderThread={(thread) => (
+                    <ProfileThreadCard
+                        thread={thread}
+                        theme={theme}
+                        onOpen={(threadId) => navigate(`/threads/${threadId}`)}
+                    />
+                )}
+                renderSavedPost={(post) => (
+                    <ProfilePostCard
+                        post={post}
+                        theme={theme}
+                        isSaved
+                        showRemove={isMe}
+                        onOpen={setSelectedPost}
+                        onRemove={handleRemoveSavedPost}
+                    />
+                )}
+                renderSavedThread={(thread) => (
+                    <ProfileThreadCard
+                        thread={thread}
+                        theme={theme}
+                        isSaved
+                        showRemove={isMe}
+                        onOpen={(threadId) => navigate(`/threads/${threadId}`)}
+                        onRemove={handleRemoveSavedThread}
+                    />
+                )}
             />
-            <Stat label="Karma" value={karma} />
-          </div>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className={`flex gap-2 p-1 rounded-xl w-fit overflow-x-auto backdrop-blur-lg transition-colors ${theme === 'dark'
-        ? 'bg-slate-900/40 border border-slate-700/30'
-        : 'bg-white/40 border border-gray-200/30'
-        }`}>
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActive(tab)}
-            aria-label={`View ${tab.toLowerCase()}`}
-            aria-current={active === tab ? 'page' : undefined}
-            className={`px-5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${active === tab
-              ? theme === 'dark'
-                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
-                : 'bg-cyan-100/50 text-cyan-700 border border-cyan-200/50 shadow-lg shadow-cyan-500/15'
-              : theme === 'dark'
-                ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/30'
-              }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+            {selectedPost ? <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} /> : null}
 
-      {/* --- CONTENT AREA --- */}
-
-      {/* 1. MY POSTS TAB */}
-      {active === "Posts" && (
-        <div className="grid grid-cols-3 gap-1">
-          {myPosts.length > 0 ? (
-            myPosts.map((post) => (
-              <div
-                key={post.id}
-                onClick={() => setSelectedPost(post)}
-                className="aspect-square bg-gray-100 relative group overflow-hidden cursor-pointer"
-              >
-                <img
-                  src={getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'thumbnail')}
-                  alt={`Post by ${user.name || "User"} - ${post.caption || "Image post"}`}
-                  width="400"
-                  height="400"
-                  loading="lazy"
-                  className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+            {isMe && isEditing ? (
+                <EditProfileModal
+                    user={user}
+                    onClose={() => setIsEditing(false)}
+                    onUpdate={(updatedData) => updateUser(updatedData)}
                 />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 text-white font-bold">
-                  <span>❤️ {post.likes || 0}</span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className={`col-span-3 text-center py-12 rounded-xl border border-dashed backdrop-blur-sm transition-colors ${theme === 'dark'
-              ? 'bg-slate-900/40 border-slate-700/30 text-slate-400'
-              : 'bg-white/40 border-gray-200/30 text-gray-400'
-              }`}>
-              <p>No posts yet</p>
-            </div>
-          )}
+            ) : null}
         </div>
-      )}
-
-      {/* 2. THREADS TAB */}
-      {active === "Threads" && (
-        <div className="space-y-3">
-          {myThreads.length > 0 ? (
-            myThreads.map((thread) => (
-              <div
-                key={thread.id}
-                onClick={() => navigate(`/threads/${thread.id}`)}
-                className={`rounded-xl p-5 border hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 transition cursor-pointer group backdrop-blur-sm ${theme === 'dark'
-                  ? 'bg-slate-900/60 border-slate-700/50'
-                  : 'bg-white/60 border-gray-200/50'
-                  }`}
-              >
-                <div className="flex items-start gap-4">
-                  {/* Category Badge */}
-                  <div className="px-3 py-1 bg-linear-to-r from-cyan-500 to-cyan-600 text-white text-xs font-semibold rounded-full shadow-lg shadow-cyan-500/20">
-                    {thread.category || "General"}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    {/* Title */}
-                    <h3 className={`text-lg font-bold mb-2 group-hover:text-cyan-400 transition ${theme === 'dark'
-                      ? 'text-slate-100'
-                      : 'text-slate-900'
-                      }`}>
-                      {thread.title}
-                    </h3>
-
-                    {/* Description */}
-                    <div
-                      className={`text-sm line-clamp-2 mb-3 ${theme === 'dark'
-                        ? 'text-slate-300'
-                        : 'text-slate-600'
-                        }`}
-                      dangerouslySetInnerHTML={{ __html: thread.description }}
-                    />
-
-                    {/* Meta Info */}
-                    <div className={`flex items-center gap-4 text-xs ${theme === 'dark'
-                      ? 'text-slate-400'
-                      : 'text-slate-500'
-                      }`}>
-                      <span className="flex items-center gap-1">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 15l7-7 7 7"
-                          />
-                        </svg>
-                        {(thread.upvotes?.length || 0) -
-                          (thread.downvotes?.length || 0)}{" "}
-                        votes
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                          />
-                        </svg>
-                        {thread.Discussion?.length || 0} answers
-                      </span>
-                      <span className="ml-auto">
-                        {thread.createdAt?.toDate
-                          ? new Date(
-                            thread.createdAt.toDate()
-                          ).toLocaleDateString()
-                          : "Recently"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className={`text-center py-16 rounded-xl border border-dashed ${theme === 'dark' ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'}`}>
-              <svg
-                className="w-16 h-16 mx-auto text-gray-300 mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-              <p className="text-gray-400 font-medium">No threads yet</p>
-              <p className="text-gray-400 text-sm mt-1">
-                Start a discussion to see it here
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 3. SAVED TAB */}
-      {active === "Saved" && (
-        <div>
-          {/* Filter Buttons */}
-          <div className="flex gap-3 mb-6">
-            <button
-              onClick={() => setSavedFilter("posts")}
-              className={`px-6 py-2 rounded-xl font-semibold transition-all ${savedFilter === "posts"
-                ? theme === 'dark'
-                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
-                  : 'bg-cyan-100/50 text-cyan-700 border border-cyan-200/50 shadow-lg shadow-cyan-500/15'
-                : theme === 'dark'
-                  ? 'bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:bg-slate-700/60'
-                  : 'bg-white/60 border border-gray-200/50 text-gray-700 hover:bg-gray-100/60'
-                }`}
-            >
-              Posts ({savedPosts.length})
-            </button>
-            <button
-              onClick={() => setSavedFilter("threads")}
-              className={`px-6 py-2 rounded-xl font-semibold transition-all ${savedFilter === "threads"
-                ? theme === 'dark'
-                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-lg shadow-cyan-500/10'
-                  : 'bg-cyan-100/50 text-cyan-700 border border-cyan-200/50 shadow-lg shadow-cyan-500/15'
-                : theme === 'dark'
-                  ? 'bg-slate-800/60 border border-slate-700/50 text-slate-300 hover:bg-slate-700/60'
-                  : 'bg-white/60 border border-gray-200/50 text-gray-700 hover:bg-gray-100/60'
-                }`}
-            >
-              Threads ({savedThreads.length})
-            </button>
-          </div>
-
-          {/* Saved Posts */}
-          {savedFilter === "posts" &&
-            (savedPosts.length > 0 ? (
-              <div className="grid grid-cols-3 gap-1">
-                {savedPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    onClick={() => setSelectedPost(post)}
-                    className="aspect-square bg-gray-100 relative group overflow-hidden cursor-pointer"
-                  >
-                    <img
-                      src={getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'thumbnail')}
-                      alt={`Saved post - ${post.caption || "Image"}`}
-                      width="400"
-                      height="400"
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:opacity-75 transition"
-                    />
-
-                    {/* Remove bookmark button */}
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        const { toggleBookmark } = await import(
-                          "../services/interactionService"
-                        );
-                        try {
-                          await toggleBookmark(user.uid, post.id, true);
-                          const updated = savedPosts.filter(
-                            (p) => p.id !== post.id
-                          );
-                          setSavedPosts(updated);
-                          updateUser({
-                            savedPosts: user.savedPosts.filter(
-                              (id) => id !== post.id
-                            ),
-                          });
-                        } catch (error) {
-                          console.error("Error removing from saved:", error);
-                        }
-                      }}
-                      aria-label="Remove saved post"
-                      className="absolute top-2 right-2 bg-white/90 rounded-full p-2 shadow-sm text-gray-700 hover:text-red-600"
-                      title="Unsave"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="w-4 h-4"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M6.32 2.577a49.255 49.255 0 0 1 11.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 0 1-1.085.67L12 18.089l-7.165 3.583A.75.75 0 0 1 3.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93Z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={`text-center py-12 rounded-xl border border-dashed backdrop-blur-sm transition-colors ${theme === 'dark'
-                ? 'bg-slate-900/40 border-slate-700/30 text-slate-400'
-                : 'bg-white/40 border-gray-200/30 text-gray-400'
-                }`}>
-                <p>No saved posts</p>
-              </div>
-            ))}
-
-          {/* Saved Threads */}
-          {savedFilter === "threads" &&
-            (savedThreads.length > 0 ? (
-              <div className="space-y-3">
-                {savedThreads.map((thread) => (
-                  <div
-                    key={thread.id}
-                    className={`rounded-xl p-5 border hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 transition group backdrop-blur-sm ${theme === 'dark'
-                      ? 'bg-slate-900/60 border-slate-700/50'
-                      : 'bg-white/60 border-gray-200/50'
-                      }`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div
-                        className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() => navigate(`/threads/${thread.id}`)}
-                      >
-                        <h3 className={`text-lg font-bold ${theme === 'dark'
-                          ? 'text-slate-100 group-hover:text-cyan-400'
-                          : 'text-slate-900 group-hover:text-cyan-700'
-                          } transition mb-2`}>
-                          {thread.title}
-                        </h3>
-                        <div
-                          className={`text-sm line-clamp-2 mb-3 ${theme === 'dark'
-                            ? 'text-slate-300'
-                            : 'text-slate-600'
-                            }`}
-                          dangerouslySetInnerHTML={{
-                            __html: thread.description,
-                          }}
-                        />
-                        <div className={`flex items-center gap-4 text-xs ${theme === 'dark'
-                          ? 'text-slate-400'
-                          : 'text-slate-500'
-                          }`}>
-                          <span className="flex items-center gap-1">
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 15l7-7 7 7"
-                              />
-                            </svg>
-                            {(thread.upvotes?.length || 0) -
-                              (thread.downvotes?.length || 0)}{" "}
-                            votes
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                              />
-                            </svg>
-                            {thread.Discussion?.length || 0} answers
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          const { toggleThreadBookmark } = await import(
-                            "../services/interactionService"
-                          );
-                          try {
-                            await toggleThreadBookmark(
-                              user.uid,
-                              thread.id,
-                              true
-                            );
-                            const updated = savedThreads.filter(
-                              (t) => t.id !== thread.id
-                            );
-                            setSavedThreads(updated);
-                            updateUser({
-                              savedThreads:
-                                user.savedThreads?.filter(
-                                  (id) => id !== thread.id
-                                ) || [],
-                            });
-                          } catch (error) {
-                            console.error("Error removing from saved:", error);
-                          }
-                        }}
-                        className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-semibold transition shrink-0"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={`text-center py-12 rounded-xl border border-dashed backdrop-blur-sm transition-colors ${theme === 'dark'
-                ? 'bg-slate-900/40 border-slate-700/30 text-slate-400'
-                : 'bg-white/40 border-gray-200/30 text-gray-400'
-                }`}>
-                <p>No saved threads</p>
-              </div>
-            ))}
-        </div>
-      )
-      }
-
-      {/* 4. PREFERENCES TAB (MATCH PREFERENCES) */}
-      {
-        active === "Preferences" && (
-          <div className={`rounded-xl p-6 space-y-6 border backdrop-blur-xl transition-colors ${theme === 'dark'
-            ? 'bg-slate-900/60 border-slate-700/50'
-            : 'bg-white/60 border-gray-200/50'
-            }`}>
-            <h3 className={`font-bold text-lg ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
-              Match Preferences
-            </h3>
-            <MatchmakerSection userProfile={user} />
-          </div>
-        )
-      }
-
-      {/* POST DETAIL MODAL */}
-      {
-        selectedPost && (
-          <PostDetailModal
-            post={selectedPost}
-            onClose={() => setSelectedPost(null)}
-          />
-        )
-      }
-
-      {/* EDIT PROFILE MODAL */}
-      {
-        isEditing && (
-          <EditProfileModal
-            user={user}
-            onClose={() => setIsEditing(false)}
-            onUpdate={(updatedData) => updateUser(updatedData)}
-          />
-        )
-      }
-    </div >
-  );
-}
-
-function Stat({ label, value }) {
-  const theme = useUserStore((state) => state.theme);
-  return (
-    <div className="text-center">
-      <p className={`font-bold text-lg ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>{value}</p>
-      <p className={`text-xs uppercase tracking-wider font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-        {label}
-      </p>
-    </div>
-  );
-}
-
-function Toggle({ label, isOn, onToggle }) {
-  const theme = useUserStore((state) => state.theme);
-  return (
-    <>
-      <div className="flex justify-between items-center">
-        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{label}</p>
-        <button
-          onClick={onToggle}
-          className={`w-12 h-6 rounded-full relative transition-all duration-300 ${isOn
-            ? 'bg-linear-to-r from-cyan-500 to-cyan-600 shadow-lg shadow-cyan-500/20'
-            : theme === 'dark'
-              ? 'bg-slate-700/60'
-              : 'bg-gray-200/60'
-            }`}
-        >
-          <div
-            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${isOn ? "left-6.5" : "left-0.5"}`}
-          ></div>
-        </button>
-      </div>
-    </>
-  );
+    );
 }

@@ -15,7 +15,7 @@ const ThreadView = lazy(() => import("./pages/ThreadView"));
 function PageLoader() {
   return (
     <div className="flex items-center justify-center h-screen">
-      <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+      <div className="w-10 h-10 border-4 border-cyan-200 border-t-cyan-600 rounded-full animate-spin" />
     </div>
   );
 }
@@ -37,6 +37,7 @@ function App() {
         <Route path="/threads" element={<Suspense fallback={<PageLoader />}><Threads /></Suspense>} />
         <Route path="/threads/:thread_id" element={<Suspense fallback={<PageLoader />}><ThreadView /></Suspense>} />
         <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
+        <Route path="/profile/:uid" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
         <Route path="/matchmaker" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />
         <Route path="/AI-Interview" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />
         <Route path="/AI-Assessment" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />

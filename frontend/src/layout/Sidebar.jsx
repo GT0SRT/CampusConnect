@@ -29,9 +29,9 @@ export default function Sidebar({ onItemClick, onClose }) {
   const theme = useUserStore((state) => state.theme);
 
   return (
-    <div className={`h-full w-full md:rounded-2xl p-4 space-y-4 transition-all duration-300 flex flex-col ${theme === 'dark'
-      ? 'bg-slate-900/60 border text-slate-100 border-slate-700/50 backdrop-blur-xl'
-      : 'bg-white/60 border border-gray-200/50 backdrop-blur-xl text-slate-900'}`}>
+    <div className={`glass-surface h-full w-full md:rounded-2xl p-4 space-y-4 transition-all duration-300 flex flex-col ${theme === 'dark'
+      ? 'text-slate-100'
+      : 'text-slate-900'}`}>
 
       <div className="flex md:hidden mb-10">
         <div className={`flex items-center gap-2 font-semibold shrink-0 transition-all

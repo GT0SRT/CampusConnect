@@ -25,7 +25,7 @@ function MainLayout() {
 
   return (
     <div className={isDark ? 'dark' : ''}>
-      <div className="h-screen flex flex-col">
+      <div className="h-screen flex flex-col site-ambient">
         <Navbar />
 
         <div className="flex-1 max-w-7xl mx-auto w-full grid grid-cols-12 gap-6 px-4 py-6 overflow-auto [&::-webkit-scrollbar]:hidden">

@@ -95,8 +95,8 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
 
   return (
     <div className={`rounded-xl overflow-hidden mb-4 transition-all duration-300 ${theme === 'dark'
-        ? 'bg-slate-900/60 border border-slate-700/50 backdrop-blur-xl'
-        : 'bg-white/60 border border-gray-200/50 backdrop-blur-xl'
+      ? 'bg-slate-900/60 border border-slate-700/50 backdrop-blur-xl'
+      : 'bg-white/60 border border-gray-200/50 backdrop-blur-xl'
       }`}>
 
       {/* Header */}
@@ -124,13 +124,19 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
           <button
             onClick={() => setShowMenu(!showMenu)}
             aria-label="Post options menu"
-            className="text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            className={`p-1 rounded-full transition ${theme === 'dark'
+              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}>
             <MoreVertical size={20} />
           </button>
 
           {/* Dropdown Menu */}
           {showMenu && (
-            <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-50">
+            <div className={`absolute right-0 top-full mt-2 rounded-lg shadow-lg border z-50 min-w-36 ${theme === 'dark'
+              ? 'bg-gray-700 border-gray-600'
+              : 'bg-white border-gray-200'
+              }`}>
               {user?.uid === post.uid && (
                 <button
                   onClick={handleDeletePost}
@@ -142,7 +148,13 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
                 </button>
               )}
               {user?.uid !== post.uid && (
-                <button aria-label="Report post" className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm">
+                <button
+                  aria-label="Report post"
+                  className={`w-full px-4 py-2 text-left text-sm transition ${theme === 'dark'
+                    ? 'text-gray-200 hover:bg-gray-600'
+                    : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                >
                   Report Post
                 </button>
               )}

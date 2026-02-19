@@ -298,8 +298,8 @@ export default function App() {
 
         {/* Glowing Orbs */}
         <div className="pointer-events-none absolute inset-0 z-0">
-          <div className="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/20 blur-[120px]" />
-          <div className="absolute right-1/4 bottom-1/3 h-[300px] w-[300px] rounded-full bg-sky-500/10 blur-[100px]" />
+          <div className="absolute left-1/2 top-1/2 h-125 w-125 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/20 blur-[120px]" />
+          <div className="absolute right-1/4 bottom-1/3 h-75 w-75 rounded-full bg-sky-500/10 blur-[100px]" />
         </div>
 
         <div className="relative z-10 mx-auto max-w-4xl text-center">
@@ -320,7 +320,7 @@ export default function App() {
             className="text-balance text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl"
           >
             Your Campus,{" "}
-            <span className="bg-gradient-to-r from-cyan-400 via-cyan-300 to-sky-400 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-cyan-400 via-cyan-300 to-sky-400 bg-clip-text text-transparent">
               Supercharged
             </span>
           </motion.h1>

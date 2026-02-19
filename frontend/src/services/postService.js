@@ -12,6 +12,11 @@ export async function getPostsByIds(ids = []) {
     return mockPosts.filter((post) => ids.includes(post.id));
 }
 
+export async function getPostsByUserId(uid) {
+    if (!uid) return [];
+    return mockPosts.filter((post) => post.uid === uid);
+}
+
 /**
  * Backend pagination endpoint
  * Simulates: GET /api/posts?page=1&limit=5&category=global

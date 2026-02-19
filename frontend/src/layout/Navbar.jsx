@@ -14,8 +14,8 @@ export default function Navbar() {
   return (
     <>
       <header className={`fixed inset-x-0 top-0 z-40 transition-all duration-300 ${theme === "dark"
-        ? "bg-slate-900/80 border-b border-slate-700/50 backdrop-blur-xl shadow-lg shadow-cyan-500/5"
-        : "bg-white/80 border-b border-gray-200/50 backdrop-blur-xl shadow-md shadow-gray-400/5"
+        ? "glass-surface shadow-lg shadow-cyan-500/5"
+        : "glass-surface shadow-md shadow-gray-400/5"
         }`}>
         <div className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-10 gap-3 items-center">
 

@@ -1,99 +1,29 @@
-import { useState } from "react";
 import { useUserStore } from "../../store/useUserStore";
-import { updateUserProfile } from "../../services/userService";
 import { X } from "lucide-react";
+import { useEditProfileController } from "../../hooks/useEditProfileController";
 
 export default function EditProfileModal({ user, onClose, onUpdate }) {
-  const [loading, setLoading] = useState(false);
   const theme = useUserStore((state) => state.theme);
-  const [formData, setFormData] = useState({
-    name: user.name || "",
-    bio: user.bio || "",
-    campus: user.campus || "",
-    batch: user.batch || "",
-    branch: user.branch || "",
-  });
-  const [imageFile, setImageFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(user.profile_pic);
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-
-  const handleRemovePhoto = () => {
-    setImageFile(null);
-    setPreviewUrl("");
-  };
-
-  const uploadToCloudinary = async () => {
-    const data = new FormData();
-    data.append("file", imageFile);
-    data.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET);
-
-    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-      method: "POST",
-      body: data,
-    });
-    const fileData = await res.json();
-    return fileData.secure_url;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Validate all required fields
-    if (!formData.name.trim()) return alert("Name is required");
-    if (!formData.campus.trim()) return alert("Campus is required");
-    if (!formData.branch.trim()) return alert("Branch is required");
-    if (!formData.batch.trim()) return alert("Batch is required");
-
-    setLoading(true);
-
-    try {
-      let profile_pic = previewUrl;
-
-      if (imageFile) {
-        profile_pic = await uploadToCloudinary();
-      }
-
-      const updatedData = {
-        ...formData,
-        profile_pic,
-      };
-
-      await updateUserProfile(user.uid, updatedData);
-
-      onUpdate(updatedData);
-      onClose();
-    } catch (error) {
-      console.error("Update failed", error);
-      alert("Failed to update profile");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    loading,
+    formData,
+    previewUrl,
+    handleChange,
+    handleImageChange,
+    handleRemovePhoto,
+    handleSubmit,
+  } = useEditProfileController({ user, onClose, onUpdate });
 
   return (
     <div className={`fixed inset-0 h-screen mb-16 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-in fade-in duration-200 ${theme === 'dark' ? 'bg-black/60' : 'bg-black/40'
       }`}>
       <div className={`rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl [&::-webkit-scrollbar]:hidden animate-in zoom-in-95 duration-200 transition-all ${theme === 'dark'
-          ? 'bg-slate-900/80 border border-slate-700/50 backdrop-blur-xl'
-          : 'bg-white/80 border border-gray-200/50 backdrop-blur-xl'
+        ? 'bg-slate-900/80 border border-slate-700/50 backdrop-blur-xl'
+        : 'bg-white/80 border border-gray-200/50 backdrop-blur-xl'
         }`}>
 
         {/* Header with gradient */}
-        <div className="top-0 p-6 rounded-t-2xl border-b transition-colors" style={{
-          borderColor: theme === 'dark' ? 'rgba(51, 65, 85, 0.5)' : 'rgba(229, 231, 235, 0.5)'
-        }}>
+        <div className={`top-0 p-6 rounded-t-2xl border-b transition-colors ${theme === 'dark' ? 'border-slate-700/50' : 'border-gray-200/50'}`}>
           <div className="flex items-center justify-between">
             <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>Edit Profile</h2>
             <button
@@ -101,8 +31,8 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
               onClick={onClose}
               aria-label="Close edit profile"
               className={`rounded-full p-2 transition ${theme === 'dark'
-                  ? 'hover:bg-slate-700/50 text-slate-400 hover:text-slate-200'
-                  : 'hover:bg-gray-100/50 text-slate-600 hover:text-slate-900'
+                ? 'hover:bg-slate-700/50 text-slate-400 hover:text-slate-200'
+                : 'hover:bg-gray-100/50 text-slate-600 hover:text-slate-900'
                 }`}
             ><X />
             </button>
@@ -112,13 +42,13 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
         <form onSubmit={handleSubmit} className={`p-6 space-y-6 ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
           {/* Profile Photo Section */}
           <div className={`flex flex-col items-center gap-4 py-4 rounded-xl p-6 transition-all ${theme === 'dark'
-              ? 'bg-slate-800/60'
-              : 'bg-blue-50/50'
+            ? 'bg-slate-800/60'
+            : 'bg-blue-50/50'
             }`}>
             <div className="relative group">
               <div className={`w-32 h-32 rounded-full overflow-hidden border-4 shadow-lg ring-2 transition-all ${theme === 'dark'
-                  ? 'bg-slate-700 border-slate-800 ring-slate-600'
-                  : 'bg-gray-100 border-white ring-blue-200'
+                ? 'bg-slate-700 border-slate-800 ring-slate-600'
+                : 'bg-gray-100 border-white ring-blue-200'
                 }`}>
                 {previewUrl ? (
                   <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
@@ -174,8 +104,8 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
               value={formData.name}
               onChange={handleChange}
               className={`w-full border rounded-xl p-3 transition focus:outline-none focus:ring-2 focus:ring-cyan-500/30 ${theme === 'dark'
-                  ? 'bg-slate-800/60 border-slate-700/50 text-slate-100 placeholder:text-slate-400 focus:border-cyan-500/50'
-                  : 'bg-gray-50/60 border-gray-200/50 text-slate-900 placeholder:text-slate-500 focus:border-cyan-500/50'
+                ? 'bg-slate-800/60 border-slate-700/50 text-slate-100 placeholder:text-slate-400 focus:border-cyan-500/50'
+                : 'bg-gray-50/60 border-gray-200/50 text-slate-900 placeholder:text-slate-500 focus:border-cyan-500/50'
                 }`}
               required
             />
@@ -279,8 +209,8 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
               disabled={loading}
               aria-label="Save profile changes"
               className={`flex-1 px-6 py-3 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg ${theme === 'dark'
-                  ? 'bg-linear-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 shadow-cyan-500/20'
-                  : 'bg-linear-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 shadow-cyan-500/30'
+                ? 'bg-linear-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 shadow-cyan-500/20'
+                : 'bg-linear-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 shadow-cyan-500/30'
                 }`}
             >
               {loading ? (

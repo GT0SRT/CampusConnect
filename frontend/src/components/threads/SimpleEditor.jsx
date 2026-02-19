@@ -6,6 +6,7 @@ import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect } from "react";
 import { useUserStore } from "../../store/useUserStore";
+import { uploadImageToCloudinary } from "../../services/cloudinaryService";
 import {
   Bold, Italic, Underline as UnderlineIcon, List, ListOrdered,
   Heading2, Heading3, Link as LinkIcon, Unlink, Image as ImageIcon
@@ -15,8 +16,8 @@ export default function SimpleEditor({ onChange, initialContent = "", placeholde
   const theme = useUserStore((state) => state.theme);
 
   const editorAttrClass = `${theme === 'dark'
-      ? 'prose prose-sm max-w-none min-h-[150px] focus:outline-none p-4 text-gray-200 [&_ol]:list-decimal [&_ul]:list-disc [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child]:before:text-gray-400 [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:pointer-events-none'
-      : 'prose prose-sm max-w-none min-h-[150px] focus:outline-none p-4 text-gray-700 [&_ol]:list-decimal [&_ul]:list-disc [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child]:before:text-gray-400 [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:pointer-events-none'
+    ? 'prose prose-sm max-w-none min-h-[150px] focus:outline-none p-4 text-gray-200 [&_ol]:list-decimal [&_ul]:list-disc [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child]:before:text-gray-400 [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:pointer-events-none'
+    : 'prose prose-sm max-w-none min-h-[150px] focus:outline-none p-4 text-gray-700 [&_ol]:list-decimal [&_ul]:list-disc [&_p.is-editor-empty:first-child]:before:content-[attr(data-placeholder)] [&_p.is-editor-empty:first-child]:before:text-gray-400 [&_p.is-editor-empty:first-child]:before:float-left [&_p.is-editor-empty:first-child]:before:pointer-events-none'
     }`;
 
   const editor = useEditor({
@@ -59,26 +60,13 @@ export default function SimpleEditor({ onChange, initialContent = "", placeholde
     }
   }, [theme, editor]);
 
-  const uploadToCloudinary = async (file) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET);
-
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/upload`,
-      { method: "POST", body: formData }
-    );
-    const data = await response.json();
-    return data.secure_url;
-  };
-
   const addImage = async (e) => {
     if (!editor) return;
     const file = e.target.files[0];
     if (!file) return;
 
     try {
-      const url = await uploadToCloudinary(file);
+      const url = await uploadImageToCloudinary(file);
       editor.chain().focus().setImage({ src: url }).run();
     } catch (error) {
       alert("Failed to upload image");
@@ -149,8 +137,8 @@ function ToolbarButton({ onClick, icon, active, theme }) {
       type="button"
       onClick={onClick}
       className={`p-1.5 rounded transition flex items-center justify-center ${active
-          ? `${theme === 'dark' ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-600'}`
-          : `${theme === 'dark' ? 'text-gray-300 hover:bg-gray-600 hover:text-gray-200' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`
+        ? `${theme === 'dark' ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-600'}`
+        : `${theme === 'dark' ? 'text-gray-300 hover:bg-gray-600 hover:text-gray-200' : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'}`
         }`}
     >
       {icon}
