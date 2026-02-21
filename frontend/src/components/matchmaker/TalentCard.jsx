@@ -5,7 +5,7 @@ export default function TalentCard({ u, onSwipe }) {
     <div className="relative bg-white rounded-2xl border border-indigo-100 shadow-[0_10px_40px_rgba(79,70,229,0.08)] hover:shadow-[0_15px_50px_rgba(79,70,229,0.12)] transition-all duration-300 p-8 h-[480px] flex flex-col justify-between">
 
       {/* Top Accent Line */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500 rounded-t-2xl"></div>
+      <div className="absolute top-0 left-0 w-full h-1 bg-cyan-500 rounded-t-2xl"></div>
 
       {/* TOP CONTENT */}
       <div>
