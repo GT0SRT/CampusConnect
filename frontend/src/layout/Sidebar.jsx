@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import {
   Home, BookOpen, Calendar, Code, MessageCircle, Users,
   HelpCircle, User, Bookmark, LogOut, X, Settings as SettingsIcon,
-  Handshake
+  Handshake, Bot, Sparkles, UsersRound
 } from "lucide-react";
 import { useUserStore } from "../store/useUserStore";
 
@@ -76,7 +76,15 @@ export default function Sidebar({ onItemClick, onClose }) {
       <Item
         to="/matchmaker"
         label="AI Matchmaker"
-        Icon={Users}
+        Icon={Bot}   // changed icon
+        theme={theme}
+        onItemClick={onItemClick}
+      />
+
+      <Item
+        to="/squard"
+        label="Squard"
+        Icon={UsersRound}   // changed icon
         theme={theme}
         onItemClick={onItemClick}
       />

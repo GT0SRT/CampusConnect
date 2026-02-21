@@ -5,6 +5,8 @@ import Landing from "./pages/Landing";
 import PrivateRoute from "./components/PrivateRoute";
 import MainLayout from "./layout/MainLayout";
 import Settings from "./pages/Settings";
+import AIAssessment from "./pages/AIAssessment";
+
 
 const Home = lazy(() => import("./pages/Home"));
 const Threads = lazy(() => import("./pages/Threads"));
@@ -39,8 +41,9 @@ function App() {
         <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
         <Route path="/profile/:uid" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
         <Route path="/matchmaker" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />
+        <Route path="/squard" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />
         <Route path="/AI-Interview" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />
-        <Route path="/AI-Assessment" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />
+        <Route path="/AI-assessment" element={<Suspense fallback={<PageLoader />}><AIAssessment /></Suspense>}/>
         <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
       </Route>
 
