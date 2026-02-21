@@ -2,7 +2,6 @@ import { useState, lazy, Suspense } from 'react';
 import { Heart, MessageCircle, Share2, Bookmark, Send, Trash2, MoreVertical } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { memo } from 'react';
-import { getAuth } from 'firebase/auth';
 import { toggleBookmark, toggleLike, addComment } from '../../services/interactionService';
 import { deletePost } from '../../services/postService';
 import { useUserStore } from '../../store/useUserStore';
@@ -12,9 +11,8 @@ import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 const CommentsModal = lazy(() => import('../modals/CommentsModal'));
 
 function PostCard({ post, onPostDeleted, isPriority = false }) {
-  const auth = getAuth();
-  const user = auth.currentUser;
   const { user: userData, updateUser } = useUserStore();
+  const user = userData;
   const theme = useUserStore((state) => state.theme);
   const [isLiked, setIsLiked] = useState(post.likedBy?.includes(user?.uid) || false);
   const [likesCount, setLikesCount] = useState(post.likes || 0);
@@ -96,7 +94,10 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
     : "Just now";
 
   return (
-    <div className={`${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-100'} rounded-xl overflow-hidden shadow-sm mb-4`}>
+    <div className={`rounded-xl overflow-hidden mb-4 transition-all duration-300 ${theme === 'dark'
+      ? 'bg-slate-900/60 border border-slate-700/50 backdrop-blur-xl'
+      : 'bg-white/60 border border-gray-200/50 backdrop-blur-xl'
+      }`}>
 
       {/* Header */}
       <div className="p-4 flex items-center gap-3 relative">
@@ -112,8 +113,8 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
           className="w-10 h-10 rounded-full object-cover bg-gray-200 border border-gray-100"
         />
         <div className="flex-1">
-          <p className={`font-semibold text-sm ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{post.author?.name || "Anonymous"}</p>
-          <p className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className={`font-semibold text-sm ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>{post.author?.name || "Anonymous"}</p>
+          <p className={`text-xs font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
             {post.author?.campus || "General"} · {timeAgo}
           </p>
         </div>
@@ -123,13 +124,19 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
           <button
             onClick={() => setShowMenu(!showMenu)}
             aria-label="Post options menu"
-            className="text-gray-400 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+            className={`p-1 rounded-full transition ${theme === 'dark'
+              ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}>
             <MoreVertical size={20} />
           </button>
 
           {/* Dropdown Menu */}
           {showMenu && (
-            <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-50">
+            <div className={`absolute right-0 top-full mt-2 rounded-lg shadow-lg border z-50 min-w-36 ${theme === 'dark'
+              ? 'bg-gray-700 border-gray-600'
+              : 'bg-white border-gray-200'
+              }`}>
               {user?.uid === post.uid && (
                 <button
                   onClick={handleDeletePost}
@@ -141,7 +148,13 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
                 </button>
               )}
               {user?.uid !== post.uid && (
-                <button aria-label="Report post" className="w-full px-4 py-2 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 text-sm">
+                <button
+                  aria-label="Report post"
+                  className={`w-full px-4 py-2 text-left text-sm transition ${theme === 'dark'
+                    ? 'text-gray-200 hover:bg-gray-600'
+                    : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                >
                   Report Post
                 </button>
               )}
@@ -152,7 +165,7 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
 
       {/* Image */}
       {post.imageUrl && (
-        <div className="w-full aspect-[4/3] bg-gray-50 dark:bg-gray-700 overflow-hidden">
+        <div className="w-full aspect-4/3 bg-gray-50 dark:bg-gray-700 overflow-hidden">
           <img
             src={getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'feed')}
             srcSet={`
@@ -196,7 +209,7 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
               >
                 <MessageCircle className="w-6 h-6" />
               </button>
-              {post.comments || 0}
+              {post.commentsCount || 0}
             </div>
 
             {/* SHARE */}

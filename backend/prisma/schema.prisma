@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  username    String   @unique
+  email       String   @unique
+  password    String 
+  fullName    String
+  collegeName String   
+  headline    String?  // e.g. "CSE Student | Full Stack Dev"
+  about       String?  // bio....
+  tags        String[] // ["Alumni", "Coder", "WebDev"] (Postgres Array)
+  skills      String[] // ["React", "Node.js", "Python"]
+
+  socialLinks Json?    // { github: "...", linkedin: "...", website: "..." }
+  education   Json?    // [{ school: "IIT", degree: "B.Tech", year: "2026" }]
+  experience  Json?    // [{ company: "Google", role: "Intern", year: "2025" }]
+
+  posts       Post[]
+  threads     Thread[]
+  comments    Comment[]
+
+  likedPosts  PostLike[]
+  votedThreads ThreadVote[]
+
+  savedPosts   SavedPost[]
+  savedThreads SavedThread[]
+
+  createdAt   DateTime @default(now())
+}
+
+model Post {
+  id          String   @id @default(uuid())
+  content     String
+  imageUrl    String?
+  collegeName String   
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+
+  // Interactions
+  likes       PostLike[]
+  comments    Comment[]
+  savedBy     SavedPost[]
+
+  createdAt   DateTime @default(now())
+}
+
+model Thread {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  tags        String[] // ["Doubt", "Placement", "Confession"]
+  collegeName String   
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+
+  // Interactions
+  upvotes     Int      @default(0)
+  downvotes   Int      @default(0)
+  votes       ThreadVote[]
+
+  comments    Comment[]
+  savedBy     SavedThread[]
+
+  createdAt   DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id])
+
+  threadId  String?
+  thread    Thread?  @relation(fields: [threadId], references: [id])
+  
+  // Nested Replies
+  parentId  String?
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+
+  createdAt DateTime @default(now())
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  userId    String
+  postId    String
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+
+  @@unique([userId, postId])
+}
+
+model ThreadVote {
+  id        String   @id @default(uuid())
+  userId    String
+  threadId  String
+  type      VoteType
+  
+  user      User     @relation(fields: [userId], references: [id])
+  thread    Thread     @relation(fields: [threadId], references: [id])
+
+  @@unique([userId, threadId])
+}
+
+model SavedPost {
+  id      String @id @default(uuid())
+  userId  String
+  postId  String
+  user    User   @relation(fields: [userId], references: [id])
+  post    Post   @relation(fields: [postId], references: [id])
+
+  @@unique([userId, postId])
+}
+
+model SavedThread {
+  id       String @id @default(uuid())
+  userId   String
+  threadId String
+  user     User   @relation(fields: [userId], references: [id])
+  thread   Thread @relation(fields: [threadId], references: [id])
+
+  @@unique([userId, threadId])
+}
+
+enum VoteType {
+  UP
+  DOWN
+}

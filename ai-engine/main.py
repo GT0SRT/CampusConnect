@@ -4,24 +4,20 @@ from pydantic import BaseModel
 import uvicorn
 import os
 from dotenv import load_dotenv
+from groq_client import chatbot
 from gemini_client import process_image_with_gemini
-from gemini_client import chatbot
 
 load_dotenv()
-
 app = FastAPI()
-
-# Allow all origins since we're just processing images - no credentials needed
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for public API
-    allow_credentials=False,  # No credentials needed for image processing
+    allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 class ImageRequest(BaseModel):
-    # Accept URL strings OR Base64 strings
     image: str
     instruction: str = "concise"
 
@@ -33,34 +29,31 @@ async def generate_endpoint(request: ImageRequest):
     try:
         if not request.image:
             raise HTTPException(status_code=400, detail="Image input is missing")
-
+        
         result = process_image_with_gemini(
             image_input=request.image, 
             instruction=request.instruction
         )
-
         return {
             "status": "success",
             "style_used": request.instruction,
             "caption": result
         }
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @app.post("/chat")
-async def generate_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest):
     try:
         if not request.message:
             raise HTTPException(status_code=400, detail="Message cannot be empty")
-
+        
         result = chatbot(request.message)
-
+        
         return {
             "status": "success",
-            "caption": result
+            "reply": result
         }
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
