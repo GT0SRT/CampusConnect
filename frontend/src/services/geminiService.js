@@ -1,6 +1,6 @@
 import { fileToBase64 } from "./cloudinaryService";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+const API_BASE_URL = (import.meta.env.VITE_AI_ENGINE_BASE_URL || import.meta.env.VITE_API_BASE_URL)?.replace(/\/$/, "");
 
 export async function generateCaptionFromImageFile(file, instruction = "") {
     const apiUrl = import.meta.env.VITE_CAPTION_API_URL;
@@ -26,6 +26,10 @@ export async function generateCaptionFromImageFile(file, instruction = "") {
 }
 
 export async function chatWithGemini(message) {
+    if (!API_BASE_URL) {
+        throw new Error("VITE_AI_ENGINE_BASE_URL (or VITE_API_BASE_URL) is not configured");
+    }
+
     const response = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

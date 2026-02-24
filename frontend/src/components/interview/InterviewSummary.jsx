@@ -5,6 +5,7 @@ import { useInterviewStore } from "../../store/useInterviewStore";
 import { useCallback, useEffect, useState } from "react";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
+const API_BASE_URL = (import.meta.env.VITE_AI_ENGINE_BASE_URL || import.meta.env.VITE_API_BASE_URL)?.replace(/\/$/, "");
 
 export default function InterviewSummary({ interview, onBackToSetup }) {
   const theme = useUserStore((state) => state.theme);
@@ -30,10 +31,9 @@ export default function InterviewSummary({ interview, onBackToSetup }) {
     setAnalysisFetchError(false);
 
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL;
-      if (!baseUrl) throw new Error("VITE_API_BASE_URL is not configured");
+      if (!API_BASE_URL) throw new Error("VITE_AI_ENGINE_BASE_URL (or VITE_API_BASE_URL) is not configured");
 
-      const response = await fetch(`${baseUrl}/analyze`, {
+      const response = await fetch(`${API_BASE_URL}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

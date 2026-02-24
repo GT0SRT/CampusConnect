@@ -6,7 +6,7 @@ import { useInterviewStore } from "../../store/useInterviewStore";
 import { generateInterviewPrompt } from "../../services/interviewerService";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+const API_BASE_URL = (import.meta.env.VITE_AI_ENGINE_BASE_URL || import.meta.env.VITE_API_BASE_URL)?.replace(/\/$/, "");
 
 export default function InterviewSetup({ onStart }) {
     const theme = useUserStore((state) => state.theme);
@@ -41,6 +41,11 @@ export default function InterviewSetup({ onStart }) {
 
         setResumeName(file.name);
         setResumeOverview("");
+
+        if (!API_BASE_URL) {
+            setResumeName("Error analyzing resume");
+            return;
+        }
 
         const formData = new FormData();
         formData.append("file", file);

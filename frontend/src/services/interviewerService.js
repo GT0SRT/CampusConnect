@@ -1,6 +1,10 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+const API_BASE_URL = (import.meta.env.VITE_AI_ENGINE_BASE_URL || import.meta.env.VITE_API_BASE_URL)?.replace(/\/$/, "");
 
 export async function generateInterviewPrompt({ company = "Tech Company", roleName = "Software Engineer", topics = "General", resumeSummary = "No resume provided", difficulty = "moderate" }) {
+    if (!API_BASE_URL) {
+        throw new Error("VITE_AI_ENGINE_BASE_URL (or VITE_API_BASE_URL) is not configured");
+    }
+
     const topicsText = Array.isArray(topics) ? topics.join(", ") : (topics || "General");
 
     const response = await fetch(`${API_BASE_URL}/generateIP`, {
@@ -25,6 +29,10 @@ export async function generateInterviewPrompt({ company = "Tech Company", roleNa
 }
 
 export async function getInterviewerReply({ message, history = [], company = "Tech Company", roleName = "Software Engineer", topics = "General", resumeSummary = "No resume provided", interviewDurationSec = 0, difficulty = "moderate", endCallPromptCount = 0, interviewPrompt = "" }) {
+    if (!API_BASE_URL) {
+        throw new Error("VITE_AI_ENGINE_BASE_URL (or VITE_API_BASE_URL) is not configured");
+    }
+
     const topicsText = Array.isArray(topics) ? topics.join(", ") : (topics || "General");
 
     // Transform history from {speaker, text, id} to {role, content}

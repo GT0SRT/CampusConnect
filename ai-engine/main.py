@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 frontend_origins = os.getenv(
     "FRONTEND_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000",
+    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,https://c2net.vercel.app",
 )
 allowed_origins = [origin.strip() for origin in frontend_origins.split(",") if origin.strip()]
 
