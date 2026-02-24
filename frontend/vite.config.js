@@ -10,6 +10,9 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+       workbox: {
+         globIgnores: ['**/InterviewCallRoom-*.js'],
+      },
       manifest: {
         name: 'campus connect',
         short_name: 'campusnet',
