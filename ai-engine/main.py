@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import uvicorn
 import os
+import logging
 from dotenv import load_dotenv
 from gemini_client import process_image_with_gemini, generate_interview_prompt_with_gemini
 from interviewer import run_interview_chat
@@ -14,6 +15,7 @@ from Assesment import generate_interview_assessment_with_gemini, assess_candidat
 
 load_dotenv()
 app = FastAPI()
+logger = logging.getLogger(__name__)
 
 frontend_origins = os.getenv(
     "FRONTEND_ORIGINS",
@@ -48,8 +50,11 @@ async def generate_endpoint(request: ImageRequest):
             "style_used": request.instruction,
             "caption": result
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("/generate failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 class ChatMessage(BaseModel):
     role: str
@@ -95,8 +100,11 @@ async def generate_interview_prompt_endpoint(request: GenerateInterviewPromptReq
             "status": "success",
             "interview_prompt": prompt,
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("/generateIP failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 class TranscriptItem(BaseModel):
     id: Optional[str | float | int] = None
@@ -122,9 +130,11 @@ async def chatbot_endpoint(request: ChatBotRequest):
             "status": "success",
             "reply": reply,
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Chatbot Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("/chat failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/interviewer")
 async def interviewer_chat_endpoint(request: InterviewerRequest):
@@ -159,32 +169,41 @@ async def interviewer_chat_endpoint(request: InterviewerRequest):
             "end_call_prompted": result.get("end_call_prompted", False),
             "endCallPromptCount": result.get("end_call_prompt_count", 0),
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Server Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("/interviewer failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/analyze")
 async def analyze_interview(request: InterviewAnalysisRequest):
-    transcript_list = [
-        {"speaker": item.speaker, "text": item.text, "id": item.id}
-        for item in request.transcript
-    ]
-    
-    topics_text = ", ".join(request.topics) if isinstance(request.topics, list) else request.topics
+    try:
+        transcript_list = [
+            {"speaker": item.speaker, "text": item.text, "id": item.id}
+            for item in request.transcript
+        ]
 
-    result = analyze_interview_with_gemini(
-        transcript=transcript_list,
-        company=request.company,
-        role_name=request.role_name,
-        topics=topics_text,
-        resume_summary=request.resume_summary,
-        interview_duration_sec=request.interview_duration_sec
-    )
+        topics_text = ", ".join(request.topics) if isinstance(request.topics, list) else request.topics
 
-    if "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
-        
-    return result
+        result = analyze_interview_with_gemini(
+            transcript=transcript_list,
+            company=request.company,
+            role_name=request.role_name,
+            topics=topics_text,
+            resume_summary=request.resume_summary,
+            interview_duration_sec=request.interview_duration_sec
+        )
+
+        if "error" in result:
+            logger.error("/analyze provider error: %s", result["error"])
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("/analyze failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/resumeanalyzer")
 async def analyze_resume(file: UploadFile = File(...)):
@@ -194,8 +213,10 @@ async def analyze_resume(file: UploadFile = File(...)):
     try:
         overview = await process_resume_analysis(file)
         return {"overview": overview}
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error: {e}")
+        logger.exception("/resumeanalyzer failed: %s", e)
         raise HTTPException(status_code=500, detail="Internal Server Error during analysis.")
 
 
@@ -226,36 +247,50 @@ class AssessResponseRequest(BaseModel):
 
 @app.post("/generate_assessment")
 async def generate_assessment(request: AssessmentRequest):
-    topics_text = ", ".join(request.topics) if isinstance(request.topics, list) else request.topics
-    assessment = generate_interview_assessment_with_gemini(
-        company=request.company,
-        role_name=request.role_name,
-        topics=topics_text,
-        difficulty=request.difficulty,
-        noOfQuestions=request.noOfQuestions,
-        totalTime=request.totalTime
-    )
-    if "error" in assessment:
-        raise HTTPException(status_code=500, detail=assessment["error"])
-    return assessment
+    try:
+        topics_text = ", ".join(request.topics) if isinstance(request.topics, list) else request.topics
+        assessment = generate_interview_assessment_with_gemini(
+            company=request.company,
+            role_name=request.role_name,
+            topics=topics_text,
+            difficulty=request.difficulty,
+            noOfQuestions=request.noOfQuestions,
+            totalTime=request.totalTime
+        )
+        if "error" in assessment:
+            logger.error("/generate_assessment provider error: %s", assessment["error"])
+            raise HTTPException(status_code=500, detail="Internal server error")
+        return assessment
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("/generate_assessment failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/assess_response")
 async def assess_response(request: AssessResponseRequest):
-    topics_text = ", ".join(request.topics) if isinstance(request.topics, list) else request.topics
-    questions_list = [q.model_dump() for q in request.questions_asked]
-    
-    assessment = assess_candidate_response_with_gemini(
-        company=request.company,
-        role_name=request.role_name,
-        topics=topics_text,
-        resume_summary=request.resume_summary,
-        difficulty=request.difficulty,
-        user_responses=request.user_responses,
-        questions_asked=questions_list
-    )
-    if "error" in assessment:
-        raise HTTPException(status_code=500, detail=assessment["error"])
-    return assessment
+    try:
+        topics_text = ", ".join(request.topics) if isinstance(request.topics, list) else request.topics
+        questions_list = [q.model_dump() for q in request.questions_asked]
+
+        assessment = assess_candidate_response_with_gemini(
+            company=request.company,
+            role_name=request.role_name,
+            topics=topics_text,
+            resume_summary=request.resume_summary,
+            difficulty=request.difficulty,
+            user_responses=request.user_responses,
+            questions_asked=questions_list
+        )
+        if "error" in assessment:
+            logger.error("/assess_response provider error: %s", assessment["error"])
+            raise HTTPException(status_code=500, detail="Internal server error")
+        return assessment
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("/assess_response failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 if __name__ == "__main__":
     server_host = os.getenv("SERVER_HOST", "0.0.0.0")
