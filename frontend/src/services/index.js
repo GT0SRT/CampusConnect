@@ -4,3 +4,4 @@ export { toggleBookmark, toggleThreadBookmark } from "./interactionService";
 export { calculateUserKarma } from "./karmaService";
 export { uploadImageToCloudinary, validateImageFile, fileToBase64 } from "./cloudinaryService";
 export { chatWithGemini, generateCaptionFromImageFile } from "./geminiService";
+export { getInterviewerReply } from "./interviewerService";

@@ -32,6 +32,7 @@ Create a `.env` in the project root for the frontend:
 ```
 VITE_CLOUDINARY_CLOUD_NAME=your_cloud_name
 VITE_CLOUDINARY_PRESET=your_unsigned_preset
+VITE_AI_ENGINE_BASE_URL=http://localhost:8000
 VITE_CAPTION_API_URL=https://your-fastapi-host/generate
 VITE_API_BASE_URL=https://your-fastapi-host
 VITE_AVATAR_API_URL=https://ui-avatars.com/api/

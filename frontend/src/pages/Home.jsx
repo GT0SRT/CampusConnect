@@ -59,12 +59,12 @@ export default function Home() {
         {/* Posts List */}
         {!isLoading && posts.length > 0 ? (
           <>
-            {posts.map((post) => (
+            {posts.map((post, index) => (
               <PostCard
                 key={post.id}
                 post={post}
                 onPostDeleted={reset}
-                isPriority={posts.indexOf(post) < 3}
+                isPriority={index < 3}
               />
             ))}
             {/* Load More Button */}
