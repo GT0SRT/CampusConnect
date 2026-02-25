@@ -16,6 +16,75 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
+
+def generate_interview_prompt_with_gemini(
+    *,
+    company: str,
+    role_name: str,
+    topics: str,
+    resume_summary: str,
+    difficulty: str = "moderate",
+):
+    """
+    Generate a complete one-time interview system prompt using Gemini.
+    This prompt is intended to be reused by Groq for all interview turns.
+    """
+    try:
+        safe_company = (company or "Tech Company").strip()
+        safe_role = (role_name or "Software Engineer").strip()
+        safe_topics = (topics or "General").strip()
+        safe_resume = (resume_summary or "No resume provided").strip()
+        safe_difficulty = (difficulty or "moderate").strip().lower()
+        if safe_difficulty not in {"basic", "moderate", "tough"}:
+            safe_difficulty = "moderate"
+
+        model = genai.GenerativeModel("models/gemini-2.5-flash")
+
+        request_prompt = f"""
+You are an expert prompt engineer.
+Generate ONE complete, production-ready SYSTEM PROMPT for a Groq-based AI interviewer.
+
+Interview inputs:
+- Company: {safe_company}
+- Role: {safe_role}
+- Topics: {safe_topics}
+- Difficulty: {safe_difficulty}
+- Candidate Resume Summary: {safe_resume}
+
+Required behavior for the generated system prompt:
+1) Real-life interview simulation with natural interviewer-candidate communication.
+2) Voice-first style: concise responses, one question at a time, smooth transitions.
+3) Interview flow guidance: intro, resume/projects, core technical/role questions, behavioral, company motivation, closing.
+4) Strong adaptation rules based on candidate response quality.
+5) Explicit difficulty calibration using the provided difficulty.
+6) Keep interviewer professional, realistic, and consistent across turns.
+7) Include strict output contract for Groq model response as JSON only:
+   {{
+     "reply": "string",
+     "allotted_time_sec": 20-90,
+     "interview_ended": true|false,
+     "end_call_prompted": true|false
+   }}
+8) Include end-call logic guidance and when to set end_call_prompted/interview_ended.
+9) English only.
+
+Output rules:
+- Return ONLY the final system prompt text.
+- Do NOT wrap in markdown.
+- Do NOT return explanation.
+""".strip()
+
+        response = model.generate_content(request_prompt)
+        generated_prompt = (response.text or "").strip()
+
+        if not generated_prompt:
+            raise ValueError("Gemini returned an empty prompt")
+
+        return generated_prompt
+    except Exception as e:
+        print(f"Gemini Interview Prompt Error: {e}")
+        raise
+
 def process_image_with_gemini(image_input: str, instruction: str = "concise"):
     """
     Handles Image Captioning using Gemini 1.5 Flash.

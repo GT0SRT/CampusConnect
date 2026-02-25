@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.36.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tiptap/extension-image": "^3.14.0",
     "@tiptap/extension-link": "^3.14.0",
@@ -21,7 +22,7 @@
     "@tiptap/starter-kit": "^3.14.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.34.0",
-    "lucide-react": "^0.562.0",
+    "lucide-react": "0.562.0",
     "pdfjs-dist": "^5.4.624",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

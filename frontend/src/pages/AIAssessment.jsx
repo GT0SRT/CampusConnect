@@ -3,7 +3,7 @@ import * as pdfjsLib from "pdfjs-dist";
 import Tesseract from "tesseract.js";
 
 export default function AIAssessment() {
-  const [file, setFile] = useState(null);
+  const [_file, setFile] = useState(null);
   const [extractedText, setExtractedText] = useState("");
   const [questionCount, setQuestionCount] = useState(5);
   const [loading, setLoading] = useState(false);
