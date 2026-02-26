@@ -17,10 +17,11 @@ export default function Matchmaker() {
     handlePass,
     handleSave,
     handleConnect,
+    swipeDirection,
   } = useMatchmakerController();
 
   return (
-    <div className={`min-h-screen py-4 px-4 ${isDark ? "bg-slate-950" : "bg-linear-to-br from-gray-50 to-gray-100"}`}>
+    <div className="min-h-screen from-gray-50 to-gray-100 py-4 px-4">
 
       {/* Header */}
       <div className="max-w-2xl mx-auto mb-4 text-center">
@@ -39,51 +40,40 @@ export default function Matchmaker() {
       </div>
 
       {/* Swipe Stack */}
-      <div className="flex justify-center px-4">
-        <div className="relative w-full max-w-md h-130">
+      <div className="relative mx-auto h-135 w-full max-w-md">
 
-          {!currentMatch ? (
-            <div className={`rounded-2xl p-8 text-center h-125 flex items-center justify-center border ${isDark
-              ? "bg-slate-900/70 border-slate-700/70 text-slate-300"
-              : "bg-white shadow-lg text-gray-500 border-gray-100"
-              }`}>
-              <div>
-                <p className="text-lg font-medium mb-2">No matches yet</p>
-                <p className="text-sm">Update profile preferences or come back for more teammate suggestions.</p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <AnimatePresence mode="wait">
-                <MotionDiv
-                  key={currentMatch.uid}
-                  drag="x"
-                  dragConstraints={{ left: 0, right: 0 }}
-                  onDragEnd={(event, info) => {
-                    if (info.offset.x > 120) handleSwipe("right");
-                    if (info.offset.x < -120) handleSwipe("left");
-                  }}
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{
-                    x: lastAction === "connect" ? 400 : lastAction === "pass" ? -400 : 0,
-                    y: lastAction === "save" ? -80 : 0,
-                    opacity: 0,
-                    rotate: lastAction === "connect" ? 10 : lastAction === "pass" ? -10 : 0,
-                    scale: lastAction === "save" ? 0.92 : 1,
-                    transition: { duration: 0.3 }
-                  }}
-                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                  className="absolute w-full z-30 cursor-grab active:cursor-grabbing"
-                >
-                  <TalentCard
-                    u={currentMatch}
-                    onPass={handlePass}
-                    onSave={handleSave}
-                    onConnect={handleConnect}
-                  />
-                </MotionDiv>
-              </AnimatePresence>
+        {matches.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg p-8 text-center text-gray-500">
+            No compatible matches found.
+          </div>
+        ) : (
+          <>
+            <AnimatePresence mode="wait">
+              <MotionDiv
+                key={matches[0].uid}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                onDragEnd={(event, info) => {
+                  if (info.offset.x > 120) handleSwipe("right");
+                  if (info.offset.x < -120) handleSwipe("left");
+                }}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{
+                  x: swipeDirection === "right" ? 400 : -400,
+                  opacity: 0,
+                  rotate: swipeDirection === "right" ? 10 : -10,
+                  transition: { duration: 0.3 }
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className="absolute w-full z-30 cursor-grab active:cursor-grabbing"
+              >
+                <TalentCard
+                  u={matches[0]}
+                  onSwipe={handleSwipe}
+                />
+              </MotionDiv>
+            </AnimatePresence>
 
               {/* Background Cards */}
               {matches.slice(1, 3).map((u, index) => (
@@ -105,7 +95,6 @@ export default function Matchmaker() {
           )}
         </div>
       </div>
-    </div>
   );
 }
 

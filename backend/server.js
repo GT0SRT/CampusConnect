@@ -12,9 +12,11 @@ app.use(cors());
 
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
+const assessmentRoutes = require('./routes/assessmentRoutes');  
 
 // Use Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/assessment', assessmentRoutes); 
 
 // Test Route
 app.get('/', (req, res) => {
