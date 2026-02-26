@@ -17,6 +17,7 @@ export default function Matchmaker() {
     handlePass,
     handleSave,
     handleConnect,
+    swipeDirection,
   } = useMatchmakerController();
 
   return (
@@ -94,7 +95,6 @@ export default function Matchmaker() {
           )}
         </div>
       </div>
-    </div>
   );
 }
 
