@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Handshake, Sparkles } from 'lucide-react';
 import { useUserStore } from '../store/useUserStore';
@@ -11,7 +11,7 @@ const Auth = () => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { setUser, user } = useUserStore();
+  const { setUser } = useUserStore();
 
   // useEffect(() => {
   //   if (user?.email) {
@@ -37,6 +37,9 @@ const Auth = () => {
         uid: `local-${Date.now()}`,
         email,
         name: email.split('@')[0] || 'Campus User',
+        github: 'your-github-username',
+        linkedin: 'your-linkedin-profile',
+        portfolio: 'https://your-portfolio.dev',
       };
 
       setUser(localUser);
@@ -57,6 +60,9 @@ const Auth = () => {
         uid: `local-google-${Date.now()}`,
         email: 'google-user@campusconnect.local',
         name: 'Google User',
+        github: 'google-user-github',
+        linkedin: 'google-user-linkedin',
+        portfolio: 'https://google-user-portfolio.dev',
       });
       navigate('/home', { replace: true });
     } catch {
@@ -70,8 +76,8 @@ const Auth = () => {
     <div className="w-screen min-h-screen bg-slate-950 relative overflow-y-auto overflow-x-hidden px-4 py-8 [&::-webkit-scrollbar]:hidden">
       {/* Decorative glowing orbs */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute left-1/2 top-1/4 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-[120px]" />
-        <div className="absolute right-1/4 bottom-1/3 h-[300px] w-[300px] rounded-full bg-sky-500/10 blur-[100px]" />
+        <div className="absolute left-1/2 top-1/4 h-125 w-125 -translate-x-1/2 rounded-full bg-cyan-500/20 blur-[120px]" />
+        <div className="absolute right-1/4 bottom-1/3 h-75 w-75 rounded-full bg-sky-500/10 blur-[100px]" />
       </div>
       <div className="absolute inset-0 bg-slate-950/30 z-0" />
 
@@ -151,7 +157,7 @@ const Auth = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-slate-950 font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-linear-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-slate-950 font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>

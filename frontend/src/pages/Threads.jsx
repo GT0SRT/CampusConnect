@@ -1,89 +1,36 @@
-import { useEffect, useState } from "react";
 import ThreadCard from "../components/threads/ThreadCard";
 import { ThreadSkeleton } from "../components/common/SkeletonLoaders";
-import { useUserStore } from "../store/useUserStore";
-import { voteOnThread, getPaginatedThreads_API } from "../services/threadService";
 import FeedTabs from "../components/feed/FeedTabs";
+import { useThreadsController } from "../hooks/useThreadsController";
 
 export default function Threads() {
-  const [threads, setThreads] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState(null);
-  const [votingThreads, setVotingThreads] = useState({});
-  const [activeTab, setActiveTab] = useState("Global");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [totalThreads, setTotalThreads] = useState(0);
-  const { user, theme } = useUserStore();
-  const THREADS_PER_PAGE = 5;
-
-  useEffect(() => {
-    setThreads([]);
-    setCurrentPage(1);
-    const loadThreads = async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-      await fetchThreads(1);
-    };
-    loadThreads();
-  }, [activeTab]);
-
-  const fetchThreads = async (page = 1) => {
-    try {
-      if (page === 1) setIsLoading(true);
-      else setIsLoadingMore(true);
-
-      setError(null);
-
-      // Backend pagination call (replace with real API endpoint later)
-      // const response = await fetch(`/api/threads?page=${page}&limit=${THREADS_PER_PAGE}&category=${activeTab.toLowerCase()}`);
-      // const data = await response.json();
-      const data = await getPaginatedThreads_API(page, THREADS_PER_PAGE);
-
-      if (page === 1) {
-        setThreads(data.data);
-      } else {
-        setThreads(prev => [...prev, ...data.data]);
-      }
-      setCurrentPage(page);
-      setHasMore(data.hasMore);
-      setTotalThreads(data.total);
-    } catch (err) {
-      console.error("Error fetching threads:", err);
-      setError(err.message || "Failed to load threads");
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  };
-
-  const loadMoreThreads = () => {
-    if (!isLoadingMore && hasMore) {
-      fetchThreads(currentPage + 1);
-    }
-  };
-
-  const handleVote = async (threadId, voteType) => {
-    if (votingThreads[threadId] || !user?.uid) return;
-
-    try {
-      setVotingThreads(prev => ({ ...prev, [threadId]: true }));
-      await voteOnThread(threadId, user.uid, voteType);
-      await fetchThreads();
-    } catch (err) {
-      console.error("Error voting:", err);
-      setError("Failed to vote");
-    } finally {
-      setVotingThreads(prev => ({ ...prev, [threadId]: false }));
-    }
-  };
+  const {
+    theme,
+    threads,
+    isLoading,
+    isRefreshing,
+    isLoadingMore,
+    error,
+    hasMore,
+    total,
+    activeTab,
+    setActiveTab,
+    loadMoreThreads,
+    reset,
+    handleVote,
+  } = useThreadsController();
 
   return (
-    <div className={`space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-40 transition-colors bg-transparent'
-      }`}>
+    <div className="space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-40 transition-colors bg-transparent">
       <FeedTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="space-y-6">
+        {isRefreshing && (
+          <p className={`text-xs font-medium ${theme === 'dark' ? 'text-cyan-300' : 'text-cyan-700'}`}>
+            Updating threads...
+          </p>
+        )}
+
         {/* Loading State */}
         {isLoading && <ThreadSkeleton count={2} />}
 
@@ -96,7 +43,7 @@ export default function Threads() {
             <p className="font-medium mb-2">Error Loading Threads</p>
             <p className="text-sm mb-4">{error}</p>
             <button
-              onClick={() => fetchThreads()}
+              onClick={reset}
               className="px-4 py-2 rounded-lg bg-linear-to-r from-cyan-500 to-cyan-600 text-white hover:from-cyan-600 hover:to-cyan-700 transition text-sm font-medium"
             >
               Try Again
@@ -121,8 +68,8 @@ export default function Threads() {
                   onClick={loadMoreThreads}
                   disabled={isLoadingMore}
                   className={`px-6 py-3 rounded-full font-medium transition-all flex items-center gap-2 ${theme === 'dark'
-                      ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 border border-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed'
-                      : 'bg-cyan-100/50 text-cyan-700 hover:bg-cyan-100/70 border border-cyan-200/50 disabled:opacity-50 disabled:cursor-not-allowed'
+                    ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 border border-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed'
+                    : 'bg-cyan-100/50 text-cyan-700 hover:bg-cyan-100/70 border border-cyan-200/50 disabled:opacity-50 disabled:cursor-not-allowed'
                     }`}
                 >
                   {isLoadingMore ? (
@@ -131,7 +78,7 @@ export default function Threads() {
                       Loading...
                     </>
                   ) : (
-                    `Load More (${threads.length}/${totalThreads})`
+                    `Load More (${threads.length}/${total})`
                   )}
                 </button>
               </div>

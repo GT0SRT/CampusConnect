@@ -1,104 +1,46 @@
-import { useEffect, useState } from "react";
-import { useUserStore } from "../store/useUserStore";
 import TalentCard from "../components/matchmaker/TalentCard";
-import { AnimatePresence } from "framer-motion";
-import { mockUsers } from "../data/mockData";
+import { AnimatePresence, motion } from "framer-motion";
+import { useMatchmakerController } from "../hooks/useMatchmakerController";
+import { useUserStore } from "../store/useUserStore";
 
-const MOCK_USERS = mockUsers.map(user => ({
-  uid: user.uid,
-  name: user.name,
-  campus: user.campus,
-  branch: user.branch,
-  batch: user.batch,
-  openToConnect: true,
-  interests: user.interests || [],
-  lookingFor: ["Study Partner", "Collaboration"],
-}));
+const MotionDiv = motion.div;
 
 export default function Matchmaker() {
-  const { user } = useUserStore();
-  const [matches, setMatches] = useState([]);
-  const [swipeDirection, setSwipeDirection] = useState(null);
-
-  const calculateScore = (currentUser, otherUser) => {
-    let score = 0;
-
-    const commonInterests =
-      currentUser.interests?.filter((interest) =>
-        otherUser.interests?.includes(interest)
-      ) || [];
-
-    const commonLookingFor =
-      currentUser.lookingFor?.filter((item) =>
-        otherUser.lookingFor?.includes(item)
-      ) || [];
-
-    score += commonInterests.length * 5;
-    score += commonLookingFor.length * 4;
-
-    if (currentUser.branch === otherUser.branch) score += 3;
-    if (currentUser.batch === otherUser.batch) score += 2;
-
-    return { score, commonInterests, commonLookingFor };
-  };
-
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const maxScore = 5 * 5 + 4 * 3 + 3 + 2;
-
-    const filtered = MOCK_USERS
-      .filter((u) => u.uid !== user.uid && u.openToConnect === true)
-      .map((u) => {
-        const { score, commonInterests, commonLookingFor } = calculateScore(user, u);
-
-        const compatibilityPercent = Math.min(
-          Math.round((score / maxScore) * 100),
-          100
-        );
-
-        return {
-          ...u,
-          compatibilityScore: score,
-          compatibilityPercent,
-          commonInterests,
-          commonLookingFor,
-        };
-      })
-      .filter((u) => u.compatibilityScore > 0)
-      .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
-
-    const timer = setTimeout(() => {
-      setMatches(filtered);
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [user]);
-
-  const handleSwipe = (direction) => {
-    if (!matches.length) return;
-
-    setSwipeDirection(direction);
-
-    // Remove first card immediately
-    setMatches((prev) => prev.slice(1));
-  };
+  const theme = useUserStore((state) => state.theme);
+  const isDark = theme === "dark";
+  const {
+    currentMatch,
+    matches,
+    lastAction,
+    decisionState,
+    handleSwipe,
+    handlePass,
+    handleSave,
+    handleConnect,
+    swipeDirection,
+  } = useMatchmakerController();
 
   return (
     <div className="min-h-screen from-gray-50 to-gray-100 py-4 px-4">
 
       {/* Header */}
-      <div className="max-w-xl mx-auto mb-10 text-center">
-        <h1 className="text-3xl font-semibold text-gray-900">
-          Matchmaker
+      <div className="max-w-2xl mx-auto mb-4 text-center">
+        <h1 className={`text-3xl font-bold mb-1 ${isDark ? "text-slate-100" : "text-gray-900"}`}>
+          Find Teammates
         </h1>
-        <p className="text-gray-600 mt-2">
-          Discover compatible talent on campus.
+        <p className={`text-sm ${isDark ? "text-slate-300" : "text-gray-600"}`}>
+          Discover talent for projects, shortlist people, then connect.
         </p>
+
+        <div className="mt-3 flex justify-center gap-2 text-xs">
+          <ActionPill label="Passed" value={decisionState.passed.length} color="red" isDark={isDark} />
+          <ActionPill label="Saved" value={decisionState.saved.length} color="amber" isDark={isDark} />
+          <ActionPill label="Connected" value={decisionState.connected.length} color="cyan" isDark={isDark} />
+        </div>
       </div>
 
       {/* Swipe Stack */}
-      <div className="relative w-full max-w-md mx-auto h-[540px]">
+      <div className="relative mx-auto h-135 w-full max-w-md">
 
         {matches.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center text-gray-500">
@@ -107,7 +49,7 @@ export default function Matchmaker() {
         ) : (
           <>
             <AnimatePresence mode="wait">
-              <motion.div
+              <MotionDiv
                 key={matches[0].uid}
                 drag="x"
                 dragConstraints={{ left: 0, right: 0 }}
@@ -130,29 +72,42 @@ export default function Matchmaker() {
                   u={matches[0]}
                   onSwipe={handleSwipe}
                 />
-              </motion.div>
+              </MotionDiv>
             </AnimatePresence>
 
-            {/* Background Cards */}
-            {matches.slice(1, 3).map((u, index) => (
-              <motion.div
-                key={u.uid}
-                initial={false}
-                animate={{
-                  scale: 1 - (index + 1) * 0.05,
-                  y: (index + 1) * 15,
-                  opacity: 1 - (index + 1) * 0.1
-                }}
-                transition={{ duration: 0.3 }}
-                className="absolute w-full"
-                style={{ zIndex: 20 - index }}
-              >
-                <TalentCard u={u} />
-              </motion.div>
-            ))}
-          </>
-        )}
+              {/* Background Cards */}
+              {matches.slice(1, 3).map((u, index) => (
+                <MotionDiv
+                  key={u.uid}
+                  initial={false}
+                  animate={{
+                    scale: 1 - (index + 1) * 0.05,
+                    y: (index + 1) * 15,
+                    opacity: 1 - (index + 1) * 0.1
+                  }}
+                  transition={{ duration: 0.3 }}
+                  className={`absolute w-full ${index === 0 ? "z-20" : "z-10"}`}
+                >
+                  <TalentCard u={u} showActions={false} />
+                </MotionDiv>
+              ))}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+  );
+}
+
+function ActionPill({ label, value, color, isDark }) {
+  const colorMap = {
+    red: isDark ? "bg-red-500/15 text-red-300 border-red-500/30" : "bg-red-100 text-red-700 border-red-200",
+    amber: isDark ? "bg-amber-500/15 text-amber-300 border-amber-500/30" : "bg-amber-100 text-amber-700 border-amber-200",
+    cyan: isDark ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/30" : "bg-cyan-100 text-cyan-700 border-cyan-200",
+  };
+
+  return (
+    <span className={`px-3 py-1 rounded-full font-medium border ${colorMap[color]}`}>
+      {label}: {value}
+    </span>
   );
 }

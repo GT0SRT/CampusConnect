@@ -9,7 +9,7 @@ export default function MatchRing({ percentage, children }) {
   return (
     <div className="relative w-16 h-16 shrink-0">
       <svg height={radius * 2} width={radius * 2}>
-        
+
         {/* Gradient Definition */}
         <defs>
           <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -35,10 +35,8 @@ export default function MatchRing({ percentage, children }) {
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={`${circumference} ${circumference}`}
-          style={{
-            strokeDashoffset,
-            transition: "stroke-dashoffset 0.8s ease"
-          }}
+          strokeDashoffset={strokeDashoffset}
+          className="transition-all duration-700"
           r={normalizedRadius}
           cx={radius}
           cy={radius}

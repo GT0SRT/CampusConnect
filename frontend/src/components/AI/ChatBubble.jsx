@@ -6,12 +6,12 @@ const ChatBubble = ({ message, isUser }) => {
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 animate-fadeIn`}>
       <div
         className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm backdrop-blur-xl transition-all ${isUser
-            ? theme === 'dark'
-              ? 'bg-linear-to-r from-cyan-500 to-cyan-600 text-white rounded-br-none shadow-lg shadow-cyan-500/20'
-              : 'bg-linear-to-r from-cyan-400 to-cyan-500 text-white rounded-br-none shadow-lg shadow-cyan-500/30'
-            : theme === 'dark'
-              ? 'bg-slate-900/60 text-slate-100 rounded-bl-none border border-slate-700/50'
-              : 'bg-white/80 text-slate-900 rounded-bl-none border border-gray-200/50'
+          ? theme === 'dark'
+            ? 'bg-linear-to-r from-cyan-500 to-cyan-600 text-white rounded-br-none shadow-lg shadow-cyan-500/20'
+            : 'bg-linear-to-r from-cyan-400 to-cyan-500 text-white rounded-br-none shadow-lg shadow-cyan-500/30'
+          : theme === 'dark'
+            ? 'bg-slate-900/60 text-slate-100 rounded-bl-none border border-slate-700/50'
+            : 'bg-white/80 text-slate-900 rounded-bl-none border border-gray-200/50'
           }`}
       >
         {/* Agar message mein image hai to dikhao */}
@@ -20,8 +20,7 @@ const ChatBubble = ({ message, isUser }) => {
             <img
               src={message.image}
               alt="Uploaded content"
-              className="rounded-lg max-w-full h-auto shadow-md"
-              style={{ maxHeight: '200px' }}
+              className="max-h-50 h-auto max-w-full rounded-lg shadow-md"
             />
           </div>
         )}

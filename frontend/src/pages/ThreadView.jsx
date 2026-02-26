@@ -1,311 +1,38 @@
 import { useParams, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { getThreadById, addAnswerToThread, addReplyToAnswer, voteOnThread, voteOnAnswer } from "../services/threadService";
-import { toggleThreadBookmark } from "../services/interactionService";
-import { useUserStore } from "../store/useUserStore";
 import SimpleEditor from '../components/threads/SimpleEditor';
-import { ArrowLeft, MessageSquare, Reply, ChevronUp, ChevronDown, Zap, Bookmark } from "lucide-react";
+import { ArrowLeft, MessageSquare, Reply, Zap, Bookmark, ChevronUp, ChevronDown } from "lucide-react";
 import { getOptimizedImageUrl } from "../utils/imageOptimizer";
-
-const toDateSafe = (value) => {
-  if (!value) return null;
-  if (value?.toDate) return value.toDate();
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
-
-const formatRelativeTime = (value) => {
-  const date = toDateSafe(value);
-  if (!date) return "Recently";
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-
-  if (diffHr < 24) {
-    if (diffMin < 1) return "Just now";
-    if (diffMin < 60) return `${diffMin}m ago`;
-    return `${diffHr}h ago`;
-  }
-
-  if (diffDay === 1) return "1 day ago";
-  if (diffDay < 7) return `${diffDay} days ago`;
-
-  return date.toLocaleDateString();
-};
+import { toDateSafe, formatRelativeTime } from "../utils/dateUtils";
+import { countReplies, useThreadViewController } from "../hooks/useThreadViewController";
 
 function ThreadView() {
   const { thread_id } = useParams();
-  const { user, updateUser } = useUserStore();
-  const theme = useUserStore((state) => state.theme);
-  const [thread, setThread] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showAnswerForm, setShowAnswerForm] = useState(false);
-  const [answerContent, setAnswerContent] = useState("");
-  const [submitingAnswer, setSubmittingAnswer] = useState(false);
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [replyContent, setReplyContent] = useState("");
-  const [submittingReply, setSubmittingReply] = useState(false);
-  const [votingAnswers, setVotingAnswers] = useState({});
-  const [votingThread, setVotingThread] = useState(false);
-  const [openReplies, setOpenReplies] = useState({});
-  const [isSaved, setIsSaved] = useState(false);
-
-  useEffect(() => {
-    setIsSaved(!!user?.savedThreads?.includes(thread_id));
-  }, [user?.savedThreads, thread_id]);
-
-  useEffect(() => {
-    fetchThread();
-  }, [thread_id]);
-
-  const fetchThread = async () => {
-    try {
-      setLoading(true);
-      const data = await getThreadById(thread_id);
-      setThread(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVote = async (threadId, voteType) => {
-    if (votingThread || !user?.uid) return;
-
-    try {
-      setVotingThread(true);
-      setThread(prevThread => {
-        if (!prevThread) return prevThread;
-        const upvotes = Array.isArray(prevThread.upvotes) ? [...prevThread.upvotes] : [];
-        const downvotes = Array.isArray(prevThread.downvotes) ? [...prevThread.downvotes] : [];
-        const inUp = upvotes.includes(user.uid);
-        const inDown = downvotes.includes(user.uid);
-
-        if (inUp || inDown) {
-          if (inUp) upvotes.splice(upvotes.indexOf(user.uid), 1);
-          if (inDown) downvotes.splice(downvotes.indexOf(user.uid), 1);
-        } else {
-          if (voteType === "up") upvotes.push(user.uid);
-          if (voteType === "down") downvotes.push(user.uid);
-        }
-
-        const votes = upvotes.length - downvotes.length;
-
-        return {
-          ...prevThread,
-          upvotes,
-          downvotes,
-          votes
-        };
-      });
-
-      await voteOnThread(threadId, user.uid, voteType);
-    } catch (error) {
-      console.error("Error voting:", error);
-      // Revert optimistic update on error
-      await fetchThread();
-    } finally {
-      setVotingThread(false);
-    }
-  };
-
-  const handleSaveThread = async () => {
-    if (!user?.uid) {
-      alert("Please login to save");
-      return;
-    }
-
-    const nextSaved = !isSaved;
-    setIsSaved(nextSaved);
-
-    // optimistic update to store
-    const currentSaved = user.savedThreads || [];
-    const updatedSaved = nextSaved
-      ? (currentSaved.includes(thread_id) ? currentSaved : [...currentSaved, thread_id])
-      : currentSaved.filter(id => id !== thread_id);
-    updateUser({ savedThreads: updatedSaved });
-
-    try {
-      await toggleThreadBookmark(user.uid, thread_id, isSaved);
-    } catch (error) {
-      console.error("Error saving thread:", error);
-      // revert
-      setIsSaved(!nextSaved);
-      updateUser({ savedThreads: currentSaved });
-    }
-  };
-
-  const handleSubmitAnswer = async () => {
-    if (!answerContent.trim() || !user) return;
-
-    try {
-      setSubmittingAnswer(true);
-      const tempId = `${Date.now()}`;
-      const newAnswer = {
-        id: tempId,
-        uid: user.uid,
-        author: {
-          name: user.name || user.displayName || "User",
-          profile_pic: user.profile_pic || user.photoURL || ""
-        },
-        content: answerContent,
-        createdAt: new Date().toISOString(),
-        replies: [],
-        votes: 0,
-        upvotes: [],
-        downvotes: []
-      };
-
-      setThread(prev => {
-        if (!prev) return prev;
-        const discussion = Array.isArray(prev.Discussion) ? [...prev.Discussion, newAnswer] : [newAnswer];
-        return { ...prev, Discussion: discussion };
-      });
-
-      setAnswerContent("");
-      setShowAnswerForm(false);
-
-      const newId = await addAnswerToThread(thread_id, user.uid, answerContent, user);
-
-      if (newId && newId !== tempId) {
-        // sync the optimistic id with the backend-generated id
-        setThread(prev => {
-          if (!prev) return prev;
-          const discussion = (prev.Discussion || []).map(ans => ans.id === tempId ? { ...ans, id: newId } : ans);
-          return { ...prev, Discussion: discussion };
-        });
-      }
-    } catch (error) {
-      console.error("Error adding answer:", error);
-      alert("Failed to add answer");
-      await fetchThread();
-    } finally {
-      setSubmittingAnswer(false);
-    }
-  };
-
-  const handleSubmitReply = async (answerId, parentReplyId = null) => {
-    if (!replyContent.trim() || !user) return;
-
-    try {
-      setSubmittingReply(true);
-      const tempId = `${Date.now()}`;
-      const newReply = {
-        id: tempId,
-        uid: user.uid,
-        author: {
-          name: user.name || user.displayName || "User",
-          profile_pic: user.profile_pic || user.photoURL || ""
-        },
-        content: replyContent,
-        createdAt: new Date().toISOString(),
-        parentId: parentReplyId,
-        replies: []
-      };
-
-      const insertLocalReply = (targetReplies = []) => {
-        if (!parentReplyId) return [...targetReplies, newReply];
-        return targetReplies.map(r => {
-          if (r.id === parentReplyId) {
-            return { ...r, replies: [...(r.replies || []), newReply] };
-          }
-          return { ...r, replies: r.replies ? insertLocalReply(r.replies) : [] };
-        });
-      };
-
-      // Optimistic UI update
-      setThread(prev => {
-        if (!prev) return prev;
-        const discussion = (prev.Discussion || []).map(ans => {
-          if (ans.id !== answerId) return ans;
-          const updatedReplies = insertLocalReply(ans.replies || []);
-          return { ...ans, replies: updatedReplies };
-        });
-        return { ...prev, Discussion: discussion };
-      });
-
-      setReplyContent("");
-      setReplyingTo(null);
-      setOpenReplies(prev => ({ ...prev, [answerId]: true }));
-
-      const newId = await addReplyToAnswer(thread_id, answerId, user.uid, replyContent, user, parentReplyId);
-
-      if (newId && newId !== tempId) {
-        // sync optimistic id with backend id
-        const syncIds = (items = []) => items.map(r => {
-          const nested = r.replies ? syncIds(r.replies) : [];
-          if (r.id === tempId) return { ...r, id: newId, replies: nested };
-          return { ...r, replies: nested };
-        });
-
-        setThread(prev => {
-          if (!prev) return prev;
-          const discussion = (prev.Discussion || []).map(ans => {
-            if (ans.id !== answerId) return ans;
-            return { ...ans, replies: syncIds(ans.replies || []) };
-          });
-          return { ...prev, Discussion: discussion };
-        });
-      }
-    } catch (error) {
-      console.error("Error adding reply:", error);
-      alert("Failed to add reply");
-      await fetchThread();
-    } finally {
-      setSubmittingReply(false);
-    }
-  };
-
-  const handleAnswerVote = async (answerId, voteType) => {
-    if (votingAnswers[answerId] || !user?.uid) return;
-
-    try {
-      setVotingAnswers(prev => ({ ...prev, [answerId]: true }));
-      setThread(prevThread => {
-        if (!prevThread) return prevThread;
-        const updatedDiscussion = prevThread.Discussion.map(answer => {
-          if (answer.id !== answerId) return answer;
-
-          const upvotes = Array.isArray(answer.upvotes) ? [...answer.upvotes] : [];
-          const downvotes = Array.isArray(answer.downvotes) ? [...answer.downvotes] : [];
-          const inUp = upvotes.includes(user.uid);
-          const inDown = downvotes.includes(user.uid);
-
-          if (inUp || inDown) {
-            if (inUp) upvotes.splice(upvotes.indexOf(user.uid), 1);
-            if (inDown) downvotes.splice(downvotes.indexOf(user.uid), 1);
-          } else {
-            if (voteType === "up") upvotes.push(user.uid);
-            if (voteType === "down") downvotes.push(user.uid);
-          }
-
-          return {
-            ...answer,
-            upvotes,
-            downvotes,
-            votes: upvotes.length - downvotes.length
-          };
-        });
-        return { ...prevThread, Discussion: updatedDiscussion };
-      });
-
-      await voteOnAnswer(thread_id, answerId, user.uid, voteType);
-    } catch (error) {
-      console.error("Error voting on answer:", error);
-      // Revert optimistic update on error
-      await fetchThread();
-    } finally {
-      setVotingAnswers(prev => ({ ...prev, [answerId]: false }));
-    }
-  };
-
-  const countReplies = (replies = []) => {
-    return replies.reduce((acc, reply) => acc + 1 + countReplies(reply.replies || []), 0);
-  };
+  const {
+    user,
+    theme,
+    thread,
+    loading,
+    showAnswerForm,
+    setShowAnswerForm,
+    answerContent,
+    setAnswerContent,
+    submitingAnswer,
+    replyingTo,
+    setReplyingTo,
+    replyContent,
+    setReplyContent,
+    submittingReply,
+    votingAnswers,
+    votingThread,
+    openReplies,
+    setOpenReplies,
+    isSaved,
+    handleVote,
+    handleSaveThread,
+    handleSubmitAnswer,
+    handleSubmitReply,
+    handleAnswerVote,
+  } = useThreadViewController(thread_id);
 
   const renderReplies = (replies = [], parentAnswerId) => {
     return replies
@@ -320,7 +47,7 @@ function ThreadView() {
         const isReplyingHere = replyingTo?.replyId === reply.id;
 
         return (
-          <div key={reply.id} className="pl-6 border-l border-gray-200 mt-3">
+          <div key={reply.id} className={`pl-6 border-l mt-3 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 {replyAuthor?.profile_pic && (
@@ -334,7 +61,7 @@ function ThreadView() {
                 )}
                 <div>
                   <div className={`text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{replyAuthor?.name || replyAuthor?.displayName || "User"}</div>
-                  <div className="text-xs text-gray-500">{formatRelativeTime(reply.createdAt || reply.timestamp)}</div>
+                  <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{formatRelativeTime(reply.createdAt || reply.timestamp)}</div>
                 </div>
               </div>
               {user && (
@@ -344,13 +71,13 @@ function ThreadView() {
                     setReplyingTo(next);
                     setReplyContent("");
                   }}
-                  className="text-xs text-blue-600 hover:text-blue-700"
+                  className={`text-xs transition ${theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
                 >
                   Reply
                 </button>
               )}
             </div>
-            <p className={`mt-2 text-sm whitespace-pre-wrap break-words ${theme === 'dark' ? 'text-gray-100' : 'text-black'}`}>{reply.content || ""}</p>
+            <p className={`mt-2 text-sm whitespace-pre-wrap wrap-break-word ${theme === 'dark' ? 'text-gray-100' : 'text-black'}`}>{reply.content || ""}</p>
 
             {isReplyingHere && (
               <div className="mt-3">
@@ -358,7 +85,10 @@ function ThreadView() {
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
                   placeholder="Write your reply..."
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${theme === 'dark'
+                    ? 'border-gray-600 bg-gray-700 text-gray-100 placeholder:text-gray-400'
+                    : 'border-gray-200 bg-white text-gray-900 placeholder:text-gray-500'
+                    }`}
                   rows="3"
                 />
                 <div className="mt-2 flex gap-2">
@@ -375,7 +105,10 @@ function ThreadView() {
                       setReplyContent("");
                     }}
                     aria-label="Cancel reply"
-                    className="px-3 py-2 bg-gray-100 text-gray-900 rounded-lg text-sm hover:bg-gray-200"
+                    className={`px-3 py-2 rounded-lg text-sm transition ${theme === 'dark'
+                      ? 'bg-gray-600 text-gray-200 hover:bg-gray-500'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                      }`}
                   >
                     Cancel
                   </button>
@@ -500,7 +233,7 @@ function ThreadView() {
         <div className={`px-6 py-4 flex items-center justify-between border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
           <div className={`flex items-center gap-4 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
             <div className="flex items-center gap-1">
-              <MessageSquare size={18} className={`text-blue-600 ${theme === 'dark' ? 'dark:text-blue-400' : ''}`} />
+              <MessageSquare size={18} className={theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} />
               <span className="font-medium">{thread.Discussion?.length || 0} Answers</span>
             </div>
           </div>
@@ -511,16 +244,47 @@ function ThreadView() {
               onClick={handleSaveThread}
               aria-label={isSaved ? "Unsave thread" : "Save thread"}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-semibold transition ${isSaved
-                ? "bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-700"
-                : "bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-500"
+                ? (theme === 'dark'
+                  ? 'bg-yellow-900/30 text-yellow-400 border-yellow-700'
+                  : 'bg-yellow-50 text-yellow-700 border-yellow-200')
+                : (theme === 'dark'
+                  ? 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100')
                 }`}
             >
               <Bookmark size={16} className={isSaved ? "fill-current" : ""} />
               {isSaved ? "Saved" : "Save"}
             </button>
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-3 py-1 bg-white dark:bg-gray-600 rounded-lg border border-gray-200 dark:border-gray-500">
+            <span className={`text-sm font-semibold px-3 py-1 rounded-lg border ${theme === 'dark'
+              ? 'text-gray-200 bg-gray-700 border-gray-600'
+              : 'text-gray-700 bg-white border-gray-200'
+              }`}>
               ⭐ {threadVoteDisplay} votes
             </span>
+            <button
+              onClick={() => handleVote(thread.id, "up")}
+              disabled={votingThread}
+              aria-label="Upvote thread"
+              className={`p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark'
+                ? 'text-gray-300 bg-gray-700 hover:bg-gray-600 hover:text-green-400'
+                : 'text-gray-600 bg-white hover:bg-gray-100 hover:text-green-600'
+                }`}
+              title="Upvote"
+            >
+              <ChevronUp size={16} />
+            </button>
+            <button
+              onClick={() => handleVote(thread.id, "down")}
+              disabled={votingThread}
+              aria-label="Downvote thread"
+              className={`p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark'
+                ? 'text-gray-300 bg-gray-700 hover:bg-gray-600 hover:text-red-400'
+                : 'text-gray-600 bg-white hover:bg-gray-100 hover:text-red-600'
+                }`}
+              title="Downvote"
+            >
+              <ChevronDown size={16} />
+            </button>
           </div>
         </div>
       </div>
@@ -544,8 +308,8 @@ function ThreadView() {
 
         {/* Add Answer Form */}
         {showAnswerForm && user && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Write your answer</h3>
+          <div className={`rounded-xl border p-6 mb-6 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+            <h3 className={`font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Write your answer</h3>
             <SimpleEditor
               onChange={setAnswerContent}
               initialContent={answerContent}
@@ -589,7 +353,7 @@ function ThreadView() {
               .map((answer) => (
                 <div key={answer.id} className={`${theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} rounded-xl overflow-hidden`}>
                   {/* Answer Header */}
-                  <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                  <div className={`px-6 py-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         {answer.author?.profile_pic && (
@@ -603,13 +367,16 @@ function ThreadView() {
                         )}
                         <div>
                           <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{answer.author?.name || "User"}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{formatRelativeTime(answer.createdAt)}</p>
+                          <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{formatRelativeTime(answer.createdAt)}</p>
                         </div>
                       </div>
                       {user && (
-                        <div className="flex items-center gap-2 bg-white dark:bg-gray-700 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600">
+                        <div className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${theme === 'dark'
+                          ? 'bg-gray-700 border-gray-600'
+                          : 'bg-white border-gray-200'
+                          }`}>
                           <Zap size={14} className="text-amber-500" />
-                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                          <span className={`text-xs font-semibold ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
                             {(answer.upvotes?.length || 0) - (answer.downvotes?.length || 0)}
                           </span>
                           <button
@@ -619,7 +386,10 @@ function ThreadView() {
                             }}
                             disabled={votingAnswers[answer.id]}
                             aria-label="Upvote answer"
-                            className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            className={`transition disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark'
+                              ? 'text-gray-400 hover:text-green-400'
+                              : 'text-gray-600 hover:text-green-600'
+                              }`}
                             title="Upvote"
                           >
                             <ChevronUp size={16} />
@@ -631,7 +401,10 @@ function ThreadView() {
                             }}
                             disabled={votingAnswers[answer.id]}
                             aria-label="Downvote answer"
-                            className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            className={`transition disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark'
+                              ? 'text-gray-400 hover:text-red-400'
+                              : 'text-gray-600 hover:text-red-600'
+                              }`}
                             title="Downvote"
                           >
                             <ChevronDown size={16} />
@@ -726,10 +499,10 @@ function ThreadView() {
               ))}
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center">
-            <MessageSquare size={32} className="mx-auto text-gray-400 dark:text-gray-600 mb-2" />
-            <p className="text-gray-600 dark:text-gray-300 font-medium">No answers yet</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Be the first to answer this question!</p>
+          <div className={`rounded-xl border border-dashed p-8 text-center ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}>
+            <MessageSquare size={32} className={`mx-auto mb-2 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
+            <p className={`font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>No answers yet</p>
+            <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Be the first to answer this question!</p>
           </div>
         )}
       </div>

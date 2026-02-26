@@ -4,12 +4,14 @@ import RightPanel from "./RightPannel";
 import { Outlet } from "react-router-dom";
 import { useEffect, useMemo, lazy, Suspense } from "react";
 import { useUserStore } from "../store/useUserStore";
+import { useInterviewStore } from "../store/useInterviewStore";
 
 // Lazy load AI components since they're heavy
 const GeminiBot = lazy(() => import("../components/AI/GeminiBot"));
 
 function MainLayout() {
   const theme = useUserStore((state) => state.theme);
+  const isInCall = useInterviewStore((state) => state.isInCall);
 
   const isDark = useMemo(() => theme === "dark", [theme]);
 
@@ -25,11 +27,13 @@ function MainLayout() {
 
   return (
     <div className={isDark ? 'dark' : ''}>
-      <div className="h-screen flex flex-col">
-        <Navbar />
+      <div className="h-screen flex flex-col site-ambient">
+        <div className={isInCall ? 'hidden' : ''}>
+          <Navbar />
+        </div>
 
         <div className="flex-1 max-w-7xl mx-auto w-full grid grid-cols-12 gap-6 px-4 py-6 overflow-auto [&::-webkit-scrollbar]:hidden">
-          <aside className="col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden">
+          <aside className={`col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden ${isInCall ? 'hidden' : ''}`}>
             <Sidebar />
           </aside>
 
@@ -37,13 +41,13 @@ function MainLayout() {
             <Outlet />
           </main>
 
-          <aside className="col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden">
+          <aside className={`col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden ${isInCall ? 'hidden' : ''}`}>
             <RightPanel />
           </aside>
         </div>
 
         <Suspense fallback={null}>
-          <GeminiBot />
+          {!isInCall && <GeminiBot />}
         </Suspense>
       </div>
     </div>

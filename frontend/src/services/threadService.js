@@ -42,8 +42,9 @@ export async function getPaginatedThreads_API(page = 1, limit = 5) {
     });
 }
 
-export async function getUserThreads() {
-    return mockThreads;
+export async function getUserThreads(uid) {
+    if (!uid) return mockThreads;
+    return mockThreads.filter((thread) => thread.uid === uid);
 }
 
 export async function getThreadsByIds(ids = []) {

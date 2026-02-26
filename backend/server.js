@@ -19,6 +19,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const postRoutes = require('./src/routes/postRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const threadRoutes = require('./src/routes/threadRoutes');
+const assessmentRoutes = require('./routes/assessmentRoutes');  
 
 // Use Routes
 app.use('/api/posts', postRoutes);
@@ -27,6 +28,7 @@ app.use('/api/threads', threadRoutes);
 app.use('/api/auth', authRoutes);
 app.use("/api/thread", threadRoutes);
 app.use("/api/comments", commentRoutes);
+app.use('/api/assessment', assessmentRoutes); 
 
 // Test Route
 app.get('/', (req, res) => {
@@ -38,3 +40,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+console.log("Loaded Gemini Key:", process.env.GEMINI_API_KEY);

@@ -1,124 +1,91 @@
-import { NavLink } from "react-router-dom";
+import { useRef, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
-  Home, BookOpen, Calendar, Code, MessageCircle, Users,
-  HelpCircle, User, Bookmark, LogOut, X, Settings as SettingsIcon,
-  Handshake
+  Home, Code, MessageCircle, User, LogOut, X, Settings as SettingsIcon,
+  Handshake, Bot, UsersRound, Brain, ChevronDown
 } from "lucide-react";
 import { useUserStore } from "../store/useUserStore";
 
-/* Sidebar Item */
-const Item = ({ to, label, Icon, theme, onItemClick }) => (
-  <NavLink
-    to={to}
-    onClick={onItemClick}
-    className={({ isActive }) => `flex items-center gap-3 px-4 py-2 rounded-xl transition-all font-medium ${isActive
-      ? theme === 'dark'
-        ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-        : 'bg-cyan-100/50 text-cyan-700 border border-cyan-200/50'
-      : theme === 'dark'
-        ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
-        : 'text-slate-600 hover:text-slate-900 hover:bg-gray-100/50'
-      }`}
-  >
+const getLinkStyles = (isActive, theme) => {
+  const base = "flex items-center gap-3 px-4 py-2 rounded-xl transition-all font-medium text-sm";
+  if (isActive) {
+    return `${base} ${theme === 'dark' 
+      ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
+      : 'bg-cyan-100/50 text-cyan-700 border border-cyan-200/50'}`;
+  }
+  return `${base} ${theme === 'dark'
+    ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+    : 'text-slate-600 hover:text-slate-900 hover:bg-gray-100/50'}`;
+};
+
+const Item = ({ to, label, Icon, theme, onItemClick, end=false }) => (
+  <NavLink to={to} end={end} onClick={onItemClick} className={({ isActive }) => getLinkStyles(isActive, theme)}>
     {Icon && <Icon className="w-5 h-5" />}
-    <span className="text-sm">{label}</span>
+    <span>{label}</span>
   </NavLink>
 );
 
 export default function Sidebar({ onItemClick, onClose }) {
   const theme = useUserStore((state) => state.theme);
+  const { pathname } = useLocation();
+  const isAiActive = pathname.toLowerCase().startsWith("/interview");
+  const [isPinned, setIsPinned] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const timerRef = useRef(null);
+
+  const isMenuOpen = isPinned || isHovered;
+
+  const handleHover = (open) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (open) setIsHovered(true);
+    else timerRef.current = setTimeout(() => setIsHovered(false), 220);
+  };
 
   return (
-    <div className={`h-full w-full md:rounded-2xl p-4 space-y-4 transition-all duration-300 flex flex-col ${theme === 'dark'
-      ? 'bg-slate-900/60 border text-slate-100 border-slate-700/50 backdrop-blur-xl'
-      : 'bg-white/60 border border-gray-200/50 backdrop-blur-xl text-slate-900'}`}>
-
-      <div className="flex md:hidden mb-10">
-        <div className={`flex items-center gap-2 font-semibold shrink-0 transition-all
-         md:col-span-2 col-span-1`}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500 transition-transform hover:scale-110 shadow-lg shadow-cyan-500/20">
+    <div className={`glass-surface h-full w-full md:rounded-2xl p-4 space-y-4 flex flex-col transition-all ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
+      <div className="flex md:hidden mb-10 justify-between items-center">
+        <div className="flex items-center gap-2 font-semibold">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500 shadow-lg shadow-cyan-500/20">
             <Handshake className="h-5 w-5 text-slate-50" />
           </div>
-          <span className="whitespace-nowrap text-lg font-bold tracking-tight">Campus Connect</span>
+          <span className="text-lg font-bold tracking-tight">Campus Connect</span>
         </div>
-
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          aria-label="Close sidebar"
-          className={`self-end p-2 rounded-lg ml-auto transition ${theme === 'dark'
-            ? 'text-slate-300 hover:bg-slate-800/60'
-            : 'text-gray-600 hover:bg-gray-100/60'
-            }`}
-        >
-          <X size={24} />
-        </button>
+        <button onClick={onClose} className={`p-2 rounded-lg ${theme === 'dark' ? 'hover:bg-slate-800' : 'hover:bg-gray-100'}`}><X size={24} /></button>
       </div>
 
-      {/* Home */}
-      <Item
-        to="/home"
-        label="Home"
-        Icon={Home}
-        theme={theme}
-        onItemClick={onItemClick}
-      />
+      <Item to="/home" label="Home" Icon={Home} theme={theme} onItemClick={onItemClick} />
+      <Item to="/threads" label="Threads" Icon={MessageCircle} theme={theme} onItemClick={onItemClick} />
+      <Item to="/matchmaker" label="AI Matchmaker" Icon={Bot} theme={theme} onItemClick={onItemClick} />
+      <Item to="/squad" label="Squad" Icon={UsersRound} theme={theme} onItemClick={onItemClick} />
+      <Item to="/AI-assessment" label="AI Assessment" Icon={Code} theme={theme} onItemClick={onItemClick} />
 
-      {/* Threads */}
-      <Item
-        to="/threads"
-        label="Threads"
-        Icon={MessageCircle}
-        theme={theme}
-        onItemClick={onItemClick}
-      />
+      <div onMouseEnter={() => handleHover(true)} onMouseLeave={() => handleHover(false)}>
+        <div className={getLinkStyles(isAiActive, theme)}>
+          <NavLink to="/interview" onClick={onItemClick} className="flex flex-1 items-center gap-3">
+            <Brain className="w-5 h-5" />
+            <span>AI Interview</span>
+          </NavLink>
+          <button 
+            onClick={(e) => { e.preventDefault(); setIsPinned(!isPinned); }}
+            className={`ml-2 rounded-md p-1 transition ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-gray-200'}`}
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
 
-      <Item
-        to="/matchmaker"
-        label="AI Matchmaker"
-        Icon={Users}
-        theme={theme}
-        onItemClick={onItemClick}
-      />
+        <div className={`ml-8 mt-1 space-y-1 overflow-hidden origin-top transition-all duration-300 ease-out 
+          ${isMenuOpen ? 'max-h-40 scale-y-100 opacity-100' : 'max-h-0 scale-y-95 opacity-0'}`}>
+          <Item to="/interview/join" label="Quick Interview" theme={theme} onItemClick={onItemClick} end />
+          <Item to="/interview/history" label="Interview History" theme={theme} onItemClick={onItemClick} />
+        </div>
+      </div>
 
-      <Item
-        to="/AI-assessment"
-        label="AI Assessment"
-        Icon={Code}
-        theme={theme}
-        onItemClick={onItemClick}
-      />
+      <Item to="/profile" label="Profile" Icon={User} theme={theme} onItemClick={onItemClick} />
+      <Item to="/settings" label="Settings" Icon={SettingsIcon} theme={theme} onItemClick={onItemClick} />
 
-      <Item
-        to="/AI-interview"
-        label="AI Interview"
-        Icon={BookOpen}
-        theme={theme}
-        onItemClick={onItemClick}
-      />
-
-      <Item
-        to="/profile"
-        label="Profile"
-        Icon={User}
-        theme={theme}
-        onItemClick={onItemClick}
-      />
-
-      <Item
-        to="/settings"
-        label="Settings"
-        Icon={SettingsIcon}
-        theme={theme}
-        onItemClick={onItemClick}
-      />
-
-      <div className={`mt-auto pt-4 border-t ${theme === 'dark' ? 'border-slate-700/50' : 'border-gray-200/50'} pl-5`}>
-        <button
-          className="text-red-600 text-sm font-semibold mr-2 items-center gap-2 inline"
-        >Logout
-        </button>
-        <LogOut className="w-4 h-4 text-red-600 inline" />
+      <div className={`mt-auto pt-4 border-t ${theme === 'dark' ? 'border-slate-700/50' : 'border-gray-200/50'} flex items-center justify-between px-4`}>
+        <button className="text-red-600 text-sm font-semibold hover:opacity-80 transition">Logout</button>
+        <LogOut className="w-4 h-4 text-red-600" />
       </div>
     </div>
   );

@@ -1,61 +1,21 @@
-import { useState } from "react";
 import { useUserStore } from "../../store/useUserStore";
-import { CreateThread as createThreadService } from "../../services/threadService";
 import SimpleEditor from "../threads/SimpleEditor"; // Ensure this path is correct
+import { useCreateThreadController } from "../../hooks/useCreateThreadController";
 
 export default function CreateThread({ onClose, onThreadCreated }) {
   const { user } = useUserStore();
   const theme = useUserStore((state) => state.theme);
-
-  // Form States
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("");
-  const [customCategory, setCustomCategory] = useState("");
-  const [content, setContent] = useState(""); // Stores HTML from Tiptap
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async () => {
-    // 1. Validation
-    if (!user) return alert("Please log in to create a thread.");
-
-    // Check profile completion
-    if (!user.name || !user.campus || !user.branch || !user.batch || !user.profile_pic) {
-      return alert("Please complete your profile first (name, campus, branch, batch, and profile picture are required).");
-    }
-
-    if (!title.trim()) return alert("Please enter a title.");
-    if (!category) return alert("Please select a category.");
-    if (category === "other" && !customCategory.trim()) return alert("Please specify the category.");
-
-    // Check if content is empty (Tiptap usually leaves <p></p> when empty)
-    if (!content || content === "<p></p>") return alert("Please add a description.");
-
-    setLoading(true);
-
-    try {
-      // Determine final category string
-      const finalCategory = category === "other" ? customCategory : category;
-
-      // 2. Call Service
-      await createThreadService(
-        user.uid,
-        title,
-        content, // Pass the HTML string
-        finalCategory,
-        user // Pass user object for snapshot
-      );
-
-      // 3. Success Callback & Close
-      if (onThreadCreated) onThreadCreated(); // Refresh feed if parent passed this
-      onClose();
-
-    } catch (error) {
-      console.error("Thread creation failed:", error);
-      alert("Failed to create thread.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    title,
+    setTitle,
+    category,
+    setCategory,
+    customCategory,
+    setCustomCategory,
+    setContent,
+    loading,
+    handleSubmit,
+  } = useCreateThreadController({ user, onClose, onThreadCreated });
 
   return (
     <div className={`space-y-4 mt-4 animate-in fade-in duration-300 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
