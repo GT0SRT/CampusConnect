@@ -1,20 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
-import { getPostsByIds } from "../services/postService";
-import { getUserThreads, getThreadsByIds } from "../services/threadService";
 import PostDetailModal from "../components/modals/PostDetailsModal";
 import EditProfileModal from "../components/modals/EditProfileModal";
-import { calculateUserKarma } from "../services/karmaService";
 import { getOptimizedImageUrl } from "../utils/imageOptimizer";
 import MatchmakerSection from "../components/profile/MatchmakerSection";
+import API from "../api";
 
 const tabs = ["Posts", "Threads", "Saved", "Preferences"];
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user, updateUser, theme } = useUserStore();
-  const userId = user?.uid;
+  const userId = user?.id;
   const userKarmaCount = user?.karmaCount ?? 0;
   const savedPostIds = useMemo(() => user?.savedPosts ?? [], [user?.savedPosts]);
   const savedThreadIds = useMemo(() => user?.savedThreads ?? [], [user?.savedThreads]);
@@ -38,42 +36,52 @@ export default function Profile() {
   }, [user]);
 
   useEffect(() => {
-    const loadProfileData = async () => {
-      if (!userId) {
-        navigate("/auth");
-        return;
-      }
+  const loadProfileData = async () => {
+    if (!userId) {
+      navigate("/auth");
+      return;
+    }
 
-      try {
-        const mySavedPosts = savedPostIds;
-        const mySavedThreads = savedThreadIds;
+    const token = localStorage.getItem("token");
 
-        const [threads, karmaValue, savedPostData, savedThreadData] = await Promise.all([
-          getUserThreads(userId),
-          calculateUserKarma(userId),
-          mySavedPosts.length > 0 ? getPostsByIds(mySavedPosts) : Promise.resolve([]),
-          mySavedThreads.length > 0 ? getThreadsByIds(mySavedThreads) : Promise.resolve([]),
+    try {
+      const [profileRes, postsRes, savedPostsRes, savedThreadsRes] =
+        await Promise.all([
+          fetch(`${API}/profile`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API}/profile/myposts`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API}/profile/saved`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API}/profile/savedthreads`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
 
-        setMyPosts(savedPostData);
-        setMyThreads(threads || []);
-        setSavedPosts(savedPostData || []);
-        setSavedThreads(savedThreadData || []);
+      const profile = await profileRes.json();
+      const myPostsData = await postsRes.json();
+      const savedPostsData = await savedPostsRes.json();
+      const savedThreadsData = await savedThreadsRes.json();
 
-        const karmaCount = typeof karmaValue === "number" ? karmaValue : karmaValue?.total || 0;
-        setKarma(karmaCount);
-        if (userKarmaCount !== karmaCount) {
-          updateUser({ karmaCount });
-        }
-      } catch (error) {
-        console.error("Error loading profile data:", error);
-      }
-    };
+      setMyPosts(myPostsData || []);
+      setMyThreads(profile.threads || []);
+      setSavedPosts(savedPostsData || []);
+      setSavedThreads(savedThreadsData || []);
 
-    loadProfileData();
-  }, [navigate, updateUser, userId, userKarmaCount, savedPostIds, savedThreadIds]);
+      setKarma(profile.karma || 0);
+    } catch (error) {
+      console.error("Error loading profile:", error);
+    }
+  };
 
-  if (!user) return null;
+  loadProfileData();
+}, [userId]);
+
+  updateUser(data.user);
+localStorage.setItem("token", data.token); 
 
   return (
     <div
@@ -363,43 +371,47 @@ export default function Profile() {
 
                     {/* Remove bookmark button */}
                     <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        const { toggleBookmark } = await import(
-                          "../services/interactionService"
-                        );
-                        try {
-                          await toggleBookmark(user.uid, post.id, true);
-                          const updated = savedPosts.filter(
-                            (p) => p.id !== post.id
-                          );
-                          setSavedPosts(updated);
-                          updateUser({
-                            savedPosts: user.savedPosts.filter(
-                              (id) => id !== post.id
-                            ),
-                          });
-                        } catch (error) {
-                          console.error("Error removing from saved:", error);
-                        }
-                      }}
-                      aria-label="Remove saved post"
-                      className="absolute top-2 right-2 bg-white/90 rounded-full p-2 shadow-sm text-gray-700 hover:text-red-600"
-                      title="Unsave"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="w-4 h-4"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M6.32 2.577a49.255 49.255 0 0 1 11.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 0 1-1.085.67L12 18.089l-7.165 3.583A.75.75 0 0 1 3.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93Z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
+  onClick={async (e) => {
+    e.stopPropagation();
+
+    try {
+      await fetch(`${API}/profile/unsave`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ postId: post.id }),
+      });
+
+      const updated = savedPosts.filter((p) => p.id !== post.id);
+      setSavedPosts(updated);
+
+      updateUser({
+        savedPosts: user.savedPosts.filter((id) => id !== post.id),
+      });
+
+    } catch (error) {
+      console.error("Error removing from saved:", error);
+    }
+  }}
+  aria-label="Remove saved post"
+  className="absolute top-2 right-2 bg-white/90 rounded-full p-2 shadow-sm text-gray-700 hover:text-red-600"
+  title="Unsave"
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className="w-4 h-4"
+  >
+    <path
+      fillRule="evenodd"
+      d="M6.32 2.577a49.255 49.255 0 0 1 11.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 0 1-1.085.67L12 18.089l-7.165 3.583A.75.75 0 0 1 3.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93Z"
+      clipRule="evenodd"
+    />
+  </svg>
+</button>
                   </div>
                 ))}
               </div>
@@ -486,15 +498,16 @@ export default function Profile() {
                       </div>
                       <button
                         onClick={async () => {
-                          const { toggleThreadBookmark } = await import(
-                            "../services/interactionService"
-                          );
+                          
                           try {
-                            await toggleThreadBookmark(
-                              user.uid,
-                              thread.id,
-                              true
-                            );
+                            await fetch(`${API}/profile/unsave`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+  body: JSON.stringify({ postId: post.id }),
+});
                             const updated = savedThreads.filter(
                               (t) => t.id !== thread.id
                             );
