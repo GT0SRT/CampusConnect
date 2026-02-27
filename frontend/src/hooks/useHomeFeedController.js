@@ -1,31 +1,51 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useUserStore } from "../store/useUserStore";
 import { getPaginatedFeed } from "../services/postService";
-import { usePagination } from "../utils/usePagination";
 
 export function useHomeFeedController() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("Global");
     const { user, theme } = useUserStore();
+    const queryClient = useQueryClient();
 
     const {
-        items: posts,
-        isLoading,
-        isRefreshing,
-        isLoadingMore,
+        data,
         error,
-        hasMore,
-        total,
-        loadMore: loadMorePosts,
-        reset,
-    } = usePagination(getPaginatedFeed, 5);
+        isLoading,
+        isFetching,
+        isFetchingNextPage,
+        hasNextPage,
+        fetchNextPage,
+        refetch,
+    } = useInfiniteQuery({
+        queryKey: ["home-feed", activeTab],
+        queryFn: ({ pageParam = null }) => getPaginatedFeed(pageParam, 5),
+        initialPageParam: null,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor || undefined,
+    });
 
-    useEffect(() => {
-        reset();
-    }, [activeTab, reset]);
+    const posts = useMemo(
+        () => (data?.pages || []).flatMap((page) => page?.data || []),
+        [data]
+    );
+
+    const total = data?.pages?.[0]?.total || posts.length;
+    const isRefreshing = isFetching && !isLoading && !isFetchingNextPage;
+    const isLoadingMore = isFetchingNextPage;
+    const hasMore = Boolean(hasNextPage);
+
+    const loadMorePosts = async () => {
+        if (!hasNextPage || isFetchingNextPage) return;
+        await fetchNextPage();
+    };
+
+    const reset = async () => {
+        await refetch();
+    };
 
     const handlePostCreated = async () => {
-        await reset({ preserveItems: true });
+        await queryClient.invalidateQueries({ queryKey: ["home-feed"] });
     };
 
     return {
@@ -35,7 +55,7 @@ export function useHomeFeedController() {
         isLoading,
         isRefreshing,
         isLoadingMore,
-        error,
+        error: error?.message || null,
         hasMore,
         total,
         activeTab,

@@ -6,7 +6,7 @@ import { useInterviewStore } from "../../store/useInterviewStore";
 import { generateInterviewPrompt } from "../../services/interviewerService";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
-const API_BASE_URL = (import.meta.env.VITE_AI_ENGINE_BASE_URL || import.meta.env.VITE_API_BASE_URL)?.replace(/\/$/, "");
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 
 export default function InterviewSetup({ onStart }) {
     const theme = useUserStore((state) => state.theme);

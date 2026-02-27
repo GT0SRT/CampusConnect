@@ -19,6 +19,8 @@ export function useVoiceInterviewer({ isMicOn, onUserSilence, silenceMs = 2000, 
     const onUserSilenceRef = useRef(onUserSilence);
     const userSpeechStartTimeRef = useRef(null);
     const userResponseTimeoutRef = useRef(null);
+    const aiTypingIntervalRef = useRef(null);
+    const aiTypingCaptionIdRef = useRef(null);
 
     const clearSilenceTimeout = useCallback(() => {
         if (silenceTimeoutRef.current) {
@@ -32,6 +34,14 @@ export function useVoiceInterviewer({ isMicOn, onUserSilence, silenceMs = 2000, 
             clearTimeout(userResponseTimeoutRef.current);
             userResponseTimeoutRef.current = null;
         }
+    }, []);
+
+    const clearAITypingInterval = useCallback(() => {
+        if (aiTypingIntervalRef.current) {
+            clearInterval(aiTypingIntervalRef.current);
+            aiTypingIntervalRef.current = null;
+        }
+        aiTypingCaptionIdRef.current = null;
     }, []);
 
     const startListening = useCallback(() => {
@@ -52,6 +62,7 @@ export function useVoiceInterviewer({ isMicOn, onUserSilence, silenceMs = 2000, 
         suppressRestartRef.current = true;
         clearSilenceTimeout();
         clearResponseTimeout();
+        clearAITypingInterval();
         stopListening();
         pendingUserTextRef.current = "";
         pendingUserCaptionIdRef.current = null;
@@ -60,7 +71,7 @@ export function useVoiceInterviewer({ isMicOn, onUserSilence, silenceMs = 2000, 
         stopSpeech();
         isSpeakingRef.current = false;
         setIsSpeaking(false);
-    }, [clearResponseTimeout, clearSilenceTimeout, stopListening]);
+    }, [clearAITypingInterval, clearResponseTimeout, clearSilenceTimeout, stopListening]);
 
     const addCaption = useCallback((speaker, text) => {
         setCaptions((prev) => [...prev, { id: Date.now() + Math.random(), speaker, text }]);
@@ -126,10 +137,59 @@ export function useVoiceInterviewer({ isMicOn, onUserSilence, silenceMs = 2000, 
     }, [startListening, stopListening]);
 
     const respondWithAI = useCallback((aiText, options = {}) => {
-        if (!aiText?.trim()) return;
-        addCaption("AI", aiText.trim());
-        speak(aiText.trim(), options);
-    }, [addCaption, speak]);
+        const normalizedText = aiText?.trim();
+        if (!normalizedText) return;
+
+        clearAITypingInterval();
+
+        const captionId = Date.now() + Math.random();
+        aiTypingCaptionIdRef.current = captionId;
+        setCaptions((prev) => [...prev, { id: captionId, speaker: "AI", text: "" }]);
+
+        const words = normalizedText.split(/\s+/).filter(Boolean);
+        const typingDurationMs = Math.min(10000, Math.max(2500, words.length * 220));
+        const typingIntervalMs = 45;
+        const totalSteps = Math.max(1, Math.ceil(typingDurationMs / typingIntervalMs));
+        let currentStep = 0;
+
+        const finishTyping = () => {
+            setCaptions((prev) => prev.map((caption) => (
+                caption.id === captionId && caption.speaker === "AI"
+                    ? { ...caption, text: normalizedText }
+                    : caption
+            )));
+            clearAITypingInterval();
+        };
+
+        aiTypingIntervalRef.current = setInterval(() => {
+            currentStep += 1;
+            const progress = Math.min(1, currentStep / totalSteps);
+            const nextLength = Math.max(1, Math.floor(normalizedText.length * progress));
+            const nextText = normalizedText.slice(0, nextLength);
+
+            setCaptions((prev) => prev.map((caption) => (
+                caption.id === captionId && caption.speaker === "AI"
+                    ? { ...caption, text: nextText }
+                    : caption
+            )));
+
+            if (progress >= 1) {
+                finishTyping();
+            }
+        }, typingIntervalMs);
+
+        speak(normalizedText, {
+            ...options,
+            onEnd: () => {
+                finishTyping();
+                options.onEnd?.();
+            },
+            onError: () => {
+                finishTyping();
+                options.onError?.();
+            },
+        });
+    }, [clearAITypingInterval, speak]);
 
     useEffect(() => {
         initializeElevenLabs();
@@ -257,12 +317,13 @@ export function useVoiceInterviewer({ isMicOn, onUserSilence, silenceMs = 2000, 
             recognition.stop();
             clearSilenceTimeout();
             clearResponseTimeout();
+            clearAITypingInterval();
             if (restartTimeoutRef.current) {
                 clearTimeout(restartTimeoutRef.current);
             }
             stopSpeech();
         };
-    }, [addOrAppendUserCaption, clearSilenceTimeout, clearResponseTimeout, maxUserResponseSec, scheduleSilenceProcessing, speak, stopListening]);
+    }, [addOrAppendUserCaption, clearAITypingInterval, clearSilenceTimeout, clearResponseTimeout, maxUserResponseSec, scheduleSilenceProcessing, speak, stopListening]);
 
     useEffect(() => {
         if (isMicOn) {

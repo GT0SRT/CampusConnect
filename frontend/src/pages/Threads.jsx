@@ -1,5 +1,4 @@
 import ThreadCard from "../components/threads/ThreadCard";
-import { ThreadSkeleton } from "../components/common/SkeletonLoaders";
 import FeedTabs from "../components/feed/FeedTabs";
 import { useThreadsController } from "../hooks/useThreadsController";
 
@@ -30,9 +29,6 @@ export default function Threads() {
             Updating threads...
           </p>
         )}
-
-        {/* Loading State */}
-        {isLoading && <ThreadSkeleton count={2} />}
 
         {/* Error State */}
         {error && !isLoading && (
@@ -78,7 +74,7 @@ export default function Threads() {
                       Loading...
                     </>
                   ) : (
-                    `Load More (${threads.length}/${total})`
+                    total > 0 ? `Load More (${threads.length}/${total})` : `Load More (${threads.length})`
                   )}
                 </button>
               </div>
@@ -89,14 +85,14 @@ export default function Threads() {
             ? 'bg-slate-900/40 border-slate-700/30'
             : 'bg-white/40 border-gray-200/30'
             }`}>
-            <img
+            {/* <img
               className="h-48 md:h-64 opacity-75 mb-4"
               src="https://cdn.svgator.com/images/2024/04/book-with-broken-pages-animation-404-error.webp"
               alt="No threads found"
               width="300"
               height="300"
               loading="lazy"
-            />
+            /> */}
             <p className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-gray-600'}`}>
               No threads found
             </p>

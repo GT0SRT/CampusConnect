@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import Auth from "./pages/Auth";
 import Landing from "./pages/Landing";
 import PrivateRoute from "./components/PrivateRoute";
@@ -19,6 +19,8 @@ const InterviewCallRoom = lazy(() => import("./components/interview/InterviewCal
 const InterviewHistory = lazy(() => import("./components/interview/InterviewHistory"));
 const InterviewSummary = lazy(() => import("./components/interview/InterviewSummary"));
 import { useInterviewStore } from "./store/useInterviewStore";
+import { useUserStore } from "./store/useUserStore";
+import { getInterviewHistory } from "./services/interviewHistoryService";
 
 function PageLoader() {
   return (
@@ -30,6 +32,32 @@ function PageLoader() {
 
 function App() {
   const interviewHistory = useInterviewStore((state) => state.interviewHistory);
+  const mergeInterviewHistory = useInterviewStore((state) => state.mergeInterviewHistory);
+  const user = useUserStore((state) => state.user);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!user?.id && !user?.uid) return () => {
+      isMounted = false;
+    };
+
+    const hydrateInterviewHistory = async () => {
+      try {
+        const records = await getInterviewHistory();
+        if (!isMounted || records.length === 0) return;
+        mergeInterviewHistory(records);
+      } catch (error) {
+        console.debug("Interview history hydration skipped", error);
+      }
+    };
+
+    hydrateInterviewHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [mergeInterviewHistory, user?.id, user?.uid]);
 
   return (
     <Routes>
@@ -38,11 +66,10 @@ function App() {
 
       {/* Main Authenticated Layout */}
       <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-        <Route path="/home" element={<Suspense fallback={<PageLoader />}><Home /></Suspense>} />
-        <Route path="/threads" element={<Suspense fallback={<PageLoader />}><Threads /></Suspense>} />
+        <Route path="/home" element={<Suspense fallback={null}><Home /></Suspense>} />
+        <Route path="/threads" element={<Suspense fallback={null}><Threads /></Suspense>} />
         <Route path="/threads/:thread_id" element={<Suspense fallback={<PageLoader />}><ThreadView /></Suspense>} />
-        <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
-        <Route path="/profile/:uid" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
+        <Route path="/profile/:username" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
         <Route path="/matchmaker" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />
         <Route path="/squad" element={<Suspense fallback={<PageLoader />}><Squad /></Suspense>} />
         <Route path="/AI-assessment" element={<Suspense fallback={<PageLoader />}><AIAssessment /></Suspense>} />

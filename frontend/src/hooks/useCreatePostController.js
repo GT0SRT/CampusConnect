@@ -46,11 +46,6 @@ export function useCreatePostController({ user, onClose, onPostCreated }) {
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (!user?.name || !user?.campus || !user?.branch || !user?.batch) {
-            alert("Please complete your profile first (name, campus, branch, and batch are required).");
-            return;
-        }
-
         if (!imageFile) {
             alert("Please select an image!");
             return;

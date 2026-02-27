@@ -1,5 +1,5 @@
-import { getPostsByIds, getPostsByUserId } from "./postService";
-import { getThreadsByIds, getUserThreads } from "./threadService";
+import { getPostsByIds, getPostsByUserId, getSavedPosts } from "./postService";
+import { getSavedThreads, getThreadsByIds, getUserThreads } from "./threadService";
 import { toggleBookmark, toggleThreadBookmark } from "./interactionService";
 import { calculateUserKarma } from "./karmaService";
 
@@ -10,22 +10,44 @@ export async function fetchProfileCollections({
     isMe = false,
     fallbackKarma = 0,
 }) {
-    const [threads, ownPosts, savedPosts, savedThreads, karmaValue] = await Promise.all([
+    const results = await Promise.allSettled([
         getUserThreads(userId),
         getPostsByUserId(userId),
-        savedPostIds.length > 0 ? getPostsByIds(savedPostIds) : Promise.resolve([]),
-        savedThreadIds.length > 0 ? getThreadsByIds(savedThreadIds) : Promise.resolve([]),
+        isMe
+            ? getSavedPosts()
+            : (savedPostIds.length > 0 ? getPostsByIds(savedPostIds) : Promise.resolve([])),
+        isMe
+            ? getSavedThreads()
+            : (savedThreadIds.length > 0 ? getThreadsByIds(savedThreadIds) : Promise.resolve([])),
         isMe ? calculateUserKarma(userId) : Promise.resolve(fallbackKarma),
     ]);
 
-    const ownThreads = Array.isArray(threads) ? threads.filter((thread) => thread.uid === userId) : [];
+    const [threadsResult, ownPostsResult, savedPostsResult, savedThreadsResult, karmaResult] = results;
+
+    const ownThreads = threadsResult.status === "fulfilled" && Array.isArray(threadsResult.value)
+        ? threadsResult.value
+        : [];
+
+    const ownPosts = ownPostsResult.status === "fulfilled" && Array.isArray(ownPostsResult.value)
+        ? ownPostsResult.value
+        : [];
+
+    const savedPosts = savedPostsResult.status === "fulfilled" && Array.isArray(savedPostsResult.value)
+        ? savedPostsResult.value
+        : [];
+
+    const savedThreads = savedThreadsResult.status === "fulfilled" && Array.isArray(savedThreadsResult.value)
+        ? savedThreadsResult.value
+        : [];
+
+    const karmaValue = karmaResult.status === "fulfilled" ? karmaResult.value : fallbackKarma;
     const computedKarma = typeof karmaValue === "number" ? karmaValue : karmaValue?.total || 0;
 
     return {
-        ownPosts: ownPosts || [],
+        ownPosts,
         ownThreads,
-        savedPosts: savedPosts || [],
-        savedThreads: savedThreads || [],
+        savedPosts,
+        savedThreads,
         karma: computedKarma,
     };
 }

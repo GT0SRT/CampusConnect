@@ -34,6 +34,11 @@ function ThreadView() {
     handleAnswerVote,
   } = useThreadViewController(thread_id);
 
+  const getAuthorHandle = (author) => {
+    const raw = author?.username || author?.name || author?.displayName || "user";
+    return `@${String(raw).replace(/^@/, "").trim()}`;
+  };
+
   const renderReplies = (replies = [], parentAnswerId) => {
     return replies
       .sort((a, b) => {
@@ -60,7 +65,7 @@ function ThreadView() {
                   />
                 )}
                 <div>
-                  <div className={`text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{replyAuthor?.name || replyAuthor?.displayName || "User"}</div>
+                  <div className={`text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{getAuthorHandle(replyAuthor)}</div>
                   <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{formatRelativeTime(reply.createdAt || reply.timestamp)}</div>
                 </div>
               </div>
@@ -168,6 +173,7 @@ function ThreadView() {
   }
 
   const authorName = typeof thread.author === "object" ? thread.author.name : thread.author;
+  const authorUsername = typeof thread.author === "object" ? thread.author.username : "";
   const netThreadVotes = (thread.upvotes?.length || 0) - (thread.downvotes?.length || 0);
   const threadVoteDisplay = Number.isFinite(netThreadVotes) ? netThreadVotes : (thread.votes || 0);
 
@@ -195,13 +201,19 @@ function ThreadView() {
               />
             )}
             <div className="flex-1">
-              <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{authorName}</p>
-              <div className="flex text-xs text-gray-600 dark:text-gray-300 flex-wrap">
-                <span className="px-2 py-1 text-gray-600 dark:text-gray-300 rounded">{thread.campus}</span>
-                <span className="mt-1">•</span>
-                <span className="px-2 py-1 text-gray-600 dark:text-gray-300 rounded">{thread.branch}</span>
-                <span className="mt-1">•</span>
-                <span className="px-2 py-1 text-gray-600 dark:text-gray-300 rounded">{thread.batch}</span>
+              <div className="flex items-center gap-2">
+                <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{authorName}</p>
+
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                {authorUsername ? (
+                  <Link
+                    to={`/profile/${authorUsername}`}
+                    className={`text-sm font-medium hover:underline ${theme === 'dark' ? 'text-cyan-300' : 'text-cyan-700'}`}
+                  >
+                    @{authorUsername}
+                  </Link>
+                ) : null}
               </div>
             </div>
             <div className="text-right">
@@ -366,7 +378,7 @@ function ThreadView() {
                           />
                         )}
                         <div>
-                          <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{answer.author?.name || "User"}</p>
+                          <p className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{getAuthorHandle(answer.author)}</p>
                           <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{formatRelativeTime(answer.createdAt)}</p>
                         </div>
                       </div>
@@ -453,7 +465,7 @@ function ThreadView() {
                     <div className={`px-6 py-4 ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'} border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-100'}`}>
                       <div className="mb-3">
                         <label className={`block text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-                          Reply to {answer.author?.name}
+                          Reply to {getAuthorHandle(answer.author)}
                         </label>
                         <textarea
                           value={replyContent}

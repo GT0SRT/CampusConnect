@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { addComment, addReply, getComments } from "../services/interactionService";
 
 export function useCommentsController({ postId, user }) {
+    const currentUsername = user?.username || user?.email?.split("@")[0] || user?.name || "user";
+
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState("");
     const [loading, setLoading] = useState(true);
@@ -33,7 +35,7 @@ export function useCommentsController({ postId, user }) {
                         const optimisticReply = {
                             id: Date.now().toString(),
                             text,
-                            author: { name: user.name, profile_pic: user.profile_pic },
+                            author: { name: user.name, username: currentUsername, profile_pic: user.profile_pic },
                             createdAt: new Date().toISOString(),
                         };
                         setExpandedThreads((prevExpanded) => ({ ...prevExpanded, [parentId]: true }));
@@ -45,7 +47,7 @@ export function useCommentsController({ postId, user }) {
 
             setNewComment("");
             setReplyingTo(null);
-            await addReply(parentId, user, text);
+            await addReply(postId, parentId, user, text);
         } catch (error) {
             console.error("Failed to reply", error);
         }
@@ -65,7 +67,7 @@ export function useCommentsController({ postId, user }) {
                 id: Date.now().toString(),
                 text: newComment,
                 createdAt: { seconds: Date.now() / 1000 },
-                author: { name: user.name, profile_pic: user.profile_pic },
+                author: { name: user.name, username: currentUsername, profile_pic: user.profile_pic },
                 replies: [],
             };
             setComments((prev) => [optimisticComment, ...prev]);
@@ -78,8 +80,9 @@ export function useCommentsController({ postId, user }) {
     };
 
     const initiateReply = (parentId, username) => {
-        setReplyingTo({ parentId, username });
-        setNewComment(`@${username} `);
+        const cleanUsername = String(username || "user").replace(/^@/, "").trim();
+        setReplyingTo({ parentId, username: cleanUsername });
+        setNewComment(`@${cleanUsername} `);
     };
 
     const toggleThread = (commentId) => {

@@ -1,7 +1,6 @@
 import CreateModal from "../components/modals/CreateModal";
 import FeedTabs from "../components/feed/FeedTabs";
 import PostCard from "../components/feed/PostCard";
-import { PostSkeleton } from "../components/common/SkeletonLoaders";
 import { useHomeFeedController } from "../hooks/useHomeFeedController";
 
 export default function Home() {
@@ -35,9 +34,6 @@ export default function Home() {
             Updating feed...
           </p>
         )}
-
-        {/* Loading State */}
-        {isLoading && <PostSkeleton count={2} />}
 
         {/* Error State */}
         {error && !isLoading && (
@@ -84,7 +80,7 @@ export default function Home() {
                       Loading...
                     </>
                   ) : (
-                    `Load More (${posts.length}/${total})`
+                    total > 0 ? `Load More (${posts.length}/${total})` : `Load More (${posts.length})`
                   )}
                 </button>
               </div>

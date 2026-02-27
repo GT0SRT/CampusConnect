@@ -25,14 +25,84 @@ exports.createThread = async (req, res) => {
 
 // ➜ Get All Threads
 exports.getThreads = async (req, res) => {
-  const threads = await prisma.thread.findMany({
-    include: {
-      author: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const { limit = 10, cursor } = req.query;
+    const take = parseInt(limit, 10);
 
-  res.json(threads);
+    const threads = await prisma.thread.findMany({
+      take,
+      ...(cursor && {
+        skip: 1,
+        cursor: { id: cursor },
+      }),
+      include: {
+        author: true,
+        votes: {
+          select: {
+            userId: true,
+            type: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const nextCursor = threads.length === take ? threads[threads.length - 1].id : null;
+
+    res.json({
+      data: threads,
+      nextCursor,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getThreadById = async (req, res) => {
+  try {
+    const { threadId } = req.params;
+
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId },
+      include: {
+        author: true,
+        votes: {
+          select: {
+            userId: true,
+            type: true,
+          },
+        },
+        comments: {
+          orderBy: {
+            createdAt: "asc",
+          },
+          include: {
+            author: {
+              select: {
+                id: true,
+                username: true,
+                fullName: true,
+                profileImageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!thread) {
+      return res.status(404).json({ msg: "Thread not found" });
+    }
+
+    res.json(thread);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 
@@ -82,6 +152,29 @@ exports.saveThread = async (req, res) => {
   }
 };
 
+exports.unsaveThread = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { threadId } = req.body;
+
+    await prisma.savedThread.delete({
+      where: {
+        userId_threadId: {
+          userId,
+          threadId,
+        },
+      },
+    });
+
+    res.json({ msg: "Thread unsaved successfully" });
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(400).json({ msg: "Thread was not saved" });
+    }
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 
 // ➜ Get Saved Threads
@@ -115,6 +208,32 @@ exports.getMyThreads = async (req, res) => {
 
     res.json(threads);
 
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.deleteThread = async (req, res) => {
+  try {
+    const { threadId } = req.params;
+
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId },
+    });
+
+    if (!thread) {
+      return res.status(404).json({ msg: "Thread not found" });
+    }
+
+    if (thread.authorId !== req.user.id) {
+      return res.status(403).json({ msg: "Not allowed to delete this thread" });
+    }
+
+    await prisma.thread.delete({
+      where: { id: threadId },
+    });
+
+    res.json({ msg: "Thread deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

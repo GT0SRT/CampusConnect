@@ -8,9 +8,13 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
     loading,
     formData,
     previewUrl,
+    customLinks,
     handleChange,
     handleImageChange,
     handleRemovePhoto,
+    addCustomLink,
+    updateCustomLink,
+    removeCustomLink,
     handleSubmit,
   } = useEditProfileController({ user, onClose, onUpdate });
 
@@ -94,6 +98,28 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
             <label className={`flex items-center gap-2 text-sm font-semibold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
               }`}>
               <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Username <span className="text-red-500">*</span>
+            </label>
+            <input
+              name="username"
+              placeholder="your_username"
+              value={formData.username}
+              onChange={handleChange}
+              className={`w-full border rounded-xl p-3 transition focus:outline-none focus:ring-2 focus:ring-cyan-500/30 ${theme === 'dark'
+                ? 'bg-slate-800/60 border-slate-700/50 text-slate-100 placeholder:text-slate-400 focus:border-cyan-500/50'
+                : 'bg-gray-50/60 border-gray-200/50 text-slate-900 placeholder:text-slate-500 focus:border-cyan-500/50'
+                }`}
+              required
+            />
+          </div>
+
+          {/* Name Field */}
+          <div className="space-y-2">
+            <label className={`flex items-center gap-2 text-sm font-semibold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
+              }`}>
+              <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               Full Name <span className="text-red-500">*</span>
@@ -111,63 +137,6 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
             />
           </div>
 
-          {/* Two Column Layout for Campus/Branch */}
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Campus */}
-            <div className="space-y-2">
-              <label className={`flex items-center gap-2 text-sm font-semibold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'
-                }`}>
-                <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                Campus <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="campus"
-                placeholder="e.g., Mumbai, Delhi"
-                value={formData.campus}
-                onChange={handleChange}
-                className={`w-full border-2 p-3 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-white placeholder:text-gray-500'}`}
-                required
-              />
-            </div>
-
-            {/* Branch */}
-            <div className="space-y-2">
-              <label className={`flex items-center gap-2 text-sm font-semibold ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
-                <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                Branch <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="branch"
-                placeholder="e.g., CSE, ECE, ME"
-                value={formData.branch}
-                onChange={handleChange}
-                className={`w-full border-2 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-white placeholder:text-gray-500'}`}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Batch Field */}
-          <div className="space-y-2">
-            <label className={`flex items-center gap-2 text-sm font-semibold ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
-              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Batch Year <span className="text-red-500">*</span>
-            </label>
-            <input
-              name="batch"
-              placeholder="e.g., 2024, 2025, 2026"
-              value={formData.batch}
-              onChange={handleChange}
-              className={`w-full border-2 p-3 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-white placeholder:text-gray-500'}`}
-              required
-            />
-          </div>
 
           {/* Bio Field */}
           <div className="space-y-2">
@@ -185,6 +154,90 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
               className={`w-full border-2 p-3 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition resize-none ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white placeholder:text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-900 hover:bg-white placeholder:text-gray-500'}`}
               rows="4"
             />
+          </div>
+
+          <div className="space-y-3">
+            <p className={`text-sm font-semibold ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>Social Links</p>
+
+            <input
+              name="github"
+              placeholder="GitHub username"
+              value={formData.github}
+              onChange={handleChange}
+              className={`w-full border rounded-xl p-3 transition focus:outline-none focus:ring-2 focus:ring-cyan-500/30 ${theme === 'dark'
+                ? 'bg-slate-800/60 border-slate-700/50 text-slate-100 placeholder:text-slate-400 focus:border-cyan-500/50'
+                : 'bg-gray-50/60 border-gray-200/50 text-slate-900 placeholder:text-slate-500 focus:border-cyan-500/50'
+                }`}
+            />
+
+            <input
+              name="linkedin"
+              placeholder="LinkedIn username"
+              value={formData.linkedin}
+              onChange={handleChange}
+              className={`w-full border rounded-xl p-3 transition focus:outline-none focus:ring-2 focus:ring-cyan-500/30 ${theme === 'dark'
+                ? 'bg-slate-800/60 border-slate-700/50 text-slate-100 placeholder:text-slate-400 focus:border-cyan-500/50'
+                : 'bg-gray-50/60 border-gray-200/50 text-slate-900 placeholder:text-slate-500 focus:border-cyan-500/50'
+                }`}
+            />
+
+            <input
+              name="portfolio"
+              placeholder="Portfolio URL"
+              value={formData.portfolio}
+              onChange={handleChange}
+              className={`w-full border rounded-xl p-3 transition focus:outline-none focus:ring-2 focus:ring-cyan-500/30 ${theme === 'dark'
+                ? 'bg-slate-800/60 border-slate-700/50 text-slate-100 placeholder:text-slate-400 focus:border-cyan-500/50'
+                : 'bg-gray-50/60 border-gray-200/50 text-slate-900 placeholder:text-slate-500 focus:border-cyan-500/50'
+                }`}
+            />
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className={`text-xs font-semibold ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>Custom Links</p>
+                <button
+                  type="button"
+                  onClick={addCustomLink}
+                  className="text-xs font-semibold text-cyan-500 hover:text-cyan-400"
+                >
+                  + Add Link
+                </button>
+              </div>
+
+              {customLinks.length === 0 ? (
+                <p className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>No custom links yet.</p>
+              ) : null}
+
+              {customLinks.map((entry, index) => (
+                <div key={`${entry.platform}-${index}`} className="grid grid-cols-12 gap-2">
+                  <input
+                    value={entry.platform}
+                    onChange={(e) => updateCustomLink(index, 'platform', e.target.value)}
+                    placeholder="platform (e.g. instagram)"
+                    className={`col-span-5 border rounded-xl p-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-cyan-500/30 ${theme === 'dark'
+                      ? 'bg-slate-800/60 border-slate-700/50 text-slate-100 placeholder:text-slate-400 focus:border-cyan-500/50'
+                      : 'bg-gray-50/60 border-gray-200/50 text-slate-900 placeholder:text-slate-500 focus:border-cyan-500/50'
+                      }`}
+                  />
+                  <input
+                    value={entry.url}
+                    onChange={(e) => updateCustomLink(index, 'url', e.target.value)}
+                    placeholder="https://..."
+                    className={`col-span-6 border rounded-xl p-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-cyan-500/30 ${theme === 'dark'
+                      ? 'bg-slate-800/60 border-slate-700/50 text-slate-100 placeholder:text-slate-400 focus:border-cyan-500/50'
+                      : 'bg-gray-50/60 border-gray-200/50 text-slate-900 placeholder:text-slate-500 focus:border-cyan-500/50'
+                      }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeCustomLink(index)}
+                    className={`col-span-1 rounded-xl border text-xs font-semibold ${theme === 'dark' ? 'border-red-700 text-red-300' : 'border-red-300 text-red-600'}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className={`flex items-center gap-1.5 text-xs p-3 rounded-lg border ${theme === 'dark' ? 'text-gray-300 bg-gray-700 border-gray-600' : 'text-gray-500 bg-blue-50 border-blue-100'}`}>

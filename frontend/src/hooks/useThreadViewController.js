@@ -79,7 +79,7 @@ export function useThreadViewController(threadId) {
                 };
             });
 
-            await voteOnThread(targetThreadId, user.uid, voteType);
+            await voteOnThread(targetThreadId, voteType);
         } catch (error) {
             console.error("Error voting:", error);
             await fetchThread();
@@ -122,6 +122,7 @@ export function useThreadViewController(threadId) {
                 id: tempId,
                 uid: user.uid,
                 author: {
+                    username: user.username || user.email?.split("@")[0] || "user",
                     name: user.name || user.displayName || "User",
                     profile_pic: user.profile_pic || user.photoURL || "",
                 },
@@ -142,7 +143,7 @@ export function useThreadViewController(threadId) {
             setAnswerContent("");
             setShowAnswerForm(false);
 
-            const newId = await addAnswerToThread(threadId, user.uid, answerContent, user);
+            const newId = await addAnswerToThread(threadId, answerContent);
 
             if (newId && newId !== tempId) {
                 setThread((prev) => {
@@ -170,6 +171,7 @@ export function useThreadViewController(threadId) {
                 id: tempId,
                 uid: user.uid,
                 author: {
+                    username: user.username || user.email?.split("@")[0] || "user",
                     name: user.name || user.displayName || "User",
                     profile_pic: user.profile_pic || user.photoURL || "",
                 },
@@ -206,7 +208,7 @@ export function useThreadViewController(threadId) {
             setReplyingTo(null);
             setOpenReplies((prev) => ({ ...prev, [answerId]: true }));
 
-            const newId = await addReplyToAnswer(threadId, answerId, user.uid, replyContent, user, parentReplyId);
+            const newId = await addReplyToAnswer(threadId, answerId, replyContent, parentReplyId);
 
             if (newId && newId !== tempId) {
                 const syncIds = (items = []) =>

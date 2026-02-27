@@ -1,17 +1,39 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { BaseModal } from "../../ui";
 
+function normalizeEducationItem(item = {}) {
+    return {
+        id: item?.id,
+        collegeName: item?.collegeName || item?.institution || "",
+        branch: item?.branch || item?.degree || item?.stream || "",
+        fromYear: item?.fromYear || "",
+        toYear: item?.toYear || "",
+    };
+}
+
 export function EditModal({ title, type, items = [], onClose, onSave, theme }) {
-    const [editItems, setEditItems] = useState(items);
+    const normalizedItems = useMemo(() => {
+        if (type !== "education") {
+            return items;
+        }
+
+        return (items || []).map((item) => normalizeEducationItem(item));
+    }, [items, type]);
+
+    const [editItems, setEditItems] = useState(normalizedItems);
+
+    useEffect(() => {
+        setEditItems(normalizedItems);
+    }, [normalizedItems]);
 
     const handleAddItem = () => {
         if (type === "education") {
-            setEditItems([...editItems, { institution: "", years: "" }]);
+            setEditItems([...editItems, { collegeName: "", branch: "", fromYear: "", toYear: "" }]);
         } else if (type === "experience") {
             setEditItems([...editItems, { company: "", role: "" }]);
         } else if (type === "projects") {
-            setEditItems([...editItems, { title: "", techStack: [] }]);
+            setEditItems([...editItems, { title: "", description: "", liveLink: "", techStack: [] }]);
         } else if (type === "skills" || type === "interests") {
             setEditItems([...editItems, ""]);
         }
@@ -32,6 +54,72 @@ export function EditModal({ title, type, items = [], onClose, onSave, theme }) {
     };
 
     const handleConfirmSave = () => {
+        if (type === "education") {
+            const sanitized = editItems
+                .map((item) => ({
+                    id: item?.id,
+                    collegeName: String(item?.collegeName || "").trim(),
+                    branch: String(item?.branch || "").trim(),
+                    fromYear: String(item?.fromYear || "").trim(),
+                    toYear: String(item?.toYear || "").trim(),
+                }))
+                .filter((item) => item.collegeName && item.branch && item.fromYear && item.toYear);
+
+            const hasInvalidRange = sanitized.some((item) => Number(item.fromYear) > Number(item.toYear));
+
+            if (hasInvalidRange) {
+                alert("From year cannot be greater than To year.");
+                return;
+            }
+
+            onSave(sanitized);
+            onClose();
+            return;
+        }
+
+        if (type === "skills" || type === "interests") {
+            const sanitized = editItems
+                .map((item) => String(item || "").trim())
+                .filter(Boolean);
+
+            onSave(sanitized);
+            onClose();
+            return;
+        }
+
+        if (type === "experience") {
+            const sanitized = editItems
+                .map((item) => ({
+                    company: String(item?.company || "").trim(),
+                    role: String(item?.role || "").trim(),
+                }))
+                .filter((item) => item.company || item.role);
+
+            onSave(sanitized);
+            onClose();
+            return;
+        }
+
+        if (type === "projects") {
+            const sanitized = editItems
+                .map((item) => ({
+                    title: String(item?.title || "").trim(),
+                    description: String(item?.description || "").trim(),
+                    liveLink: String(item?.liveLink || item?.link || item?.url || "").trim(),
+                    techStack: Array.isArray(item?.techStack)
+                        ? item.techStack.map((entry) => String(entry || "").trim()).filter(Boolean)
+                        : String(item?.techStack || "")
+                            .split(",")
+                            .map((entry) => entry.trim())
+                            .filter(Boolean),
+                }))
+                .filter((item) => item.title || item.description || item.liveLink || item.techStack.length > 0);
+
+            onSave(sanitized);
+            onClose();
+            return;
+        }
+
         onSave(editItems);
         onClose();
     };
@@ -78,18 +166,38 @@ export function EditModal({ title, type, items = [], onClose, onSave, theme }) {
                                         <>
                                             <input
                                                 type="text"
-                                                value={item.institution || ""}
-                                                onChange={(e) => handleUpdateItem(index, "institution", e.target.value)}
-                                                placeholder="Institution"
+                                                value={item.collegeName || ""}
+                                                onChange={(e) => handleUpdateItem(index, "collegeName", e.target.value)}
+                                                placeholder="College Name"
                                                 className={`w-full rounded-lg border px-3 py-1 text-xs ${inputBgClass}`}
                                             />
                                             <input
                                                 type="text"
-                                                value={item.years || ""}
-                                                onChange={(e) => handleUpdateItem(index, "years", e.target.value)}
-                                                placeholder="Years (e.g., 2022 - 2026)"
+                                                value={item.branch || ""}
+                                                onChange={(e) => handleUpdateItem(index, "branch", e.target.value)}
+                                                placeholder="Branch (e.g., CSE)"
                                                 className={`w-full rounded-lg border px-3 py-1 text-xs ${inputBgClass}`}
                                             />
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <input
+                                                    type="number"
+                                                    min="1990"
+                                                    max="2100"
+                                                    value={item.fromYear || ""}
+                                                    onChange={(e) => handleUpdateItem(index, "fromYear", e.target.value)}
+                                                    placeholder="From year"
+                                                    className={`w-full rounded-lg border px-3 py-1 text-xs ${inputBgClass}`}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    min="1990"
+                                                    max="2100"
+                                                    value={item.toYear || ""}
+                                                    onChange={(e) => handleUpdateItem(index, "toYear", e.target.value)}
+                                                    placeholder="To year"
+                                                    className={`w-full rounded-lg border px-3 py-1 text-xs ${inputBgClass}`}
+                                                />
+                                            </div>
                                         </>
                                     )}
                                     {type === "experience" && (
@@ -117,6 +225,20 @@ export function EditModal({ title, type, items = [], onClose, onSave, theme }) {
                                                 value={item.title || ""}
                                                 onChange={(e) => handleUpdateItem(index, "title", e.target.value)}
                                                 placeholder="Project Title"
+                                                className={`w-full rounded-lg border px-3 py-1 text-xs ${inputBgClass}`}
+                                            />
+                                            <textarea
+                                                value={item.description || ""}
+                                                onChange={(e) => handleUpdateItem(index, "description", e.target.value)}
+                                                placeholder="Short project description"
+                                                rows={3}
+                                                className={`w-full rounded-lg border px-3 py-1 text-xs ${inputBgClass}`}
+                                            />
+                                            <input
+                                                type="text"
+                                                value={item.liveLink || item.link || item.url || ""}
+                                                onChange={(e) => handleUpdateItem(index, "liveLink", e.target.value)}
+                                                placeholder="Live link (https://...)"
                                                 className={`w-full rounded-lg border px-3 py-1 text-xs ${inputBgClass}`}
                                             />
                                             <input

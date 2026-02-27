@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Handshake, Sparkles } from 'lucide-react';
-import { useUserStore } from '../store/useUserStore';
+import { Mail, Lock, ArrowRight, Handshake } from 'lucide-react';
+import { login, register } from '../services/authService';
+import { useEffect } from 'react';
+import { useUserStore } from './../store/useUserStore';
 
 const Auth = () => {
+  const user = useUserStore((state) => state.user);
+  const setUser = useUserStore((state) => state.setUser);
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -11,13 +15,12 @@ const Auth = () => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { setUser } = useUserStore();
 
-  // useEffect(() => {
-  //   if (user?.email) {
-  //     navigate('/home', { replace: true });
-  //   }
-  // }, [user, navigate]);
+  useEffect(() => {
+    if (user?.email) {
+      navigate('/home', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -26,50 +29,56 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      const response = isLogin
+        ? await login({ email, password })
+        : await register({ username: email.split('@')[0], email, password });
 
-      if (!email || !password) {
-        setError('Please enter email and password.');
-        return;
+      const authUser = response?.data?.user;
+      const token = response?.data?.token;
+
+      if (token) {
+        localStorage.setItem('auth-token', token);
       }
 
-      const localUser = {
-        uid: `local-${Date.now()}`,
-        email,
-        name: email.split('@')[0] || 'Campus User',
-        github: 'your-github-username',
-        linkedin: 'your-linkedin-profile',
-        portfolio: 'https://your-portfolio.dev',
-      };
+      if (authUser) {
+        setUser({
+          uid: authUser.uid || authUser.id,
+          id: authUser.id || authUser.uid,
+          username: authUser.username || email.split('@')[0],
+          email: authUser.email || email,
+          name: authUser.fullName || '',
+          profile_pic: authUser.profileImageUrl || '',
+          campus: authUser.collegeName || '',
+          branch: authUser.headline || '',
+          bio: authUser.about || '',
+          profileCompletePercentage: authUser.profileCompletePercentage ?? 0,
+          tags: authUser.tags || [],
+          skills: authUser.skills || [],
+          interests: authUser.interests || [],
+          socialLinks: authUser.socialLinks || {},
+          education: authUser.education || [],
+          experience: authUser.experience || [],
+          projects: authUser.projects || [],
+          savedPosts: authUser.savedPosts || [],
+          savedThreads: authUser.savedThreads || [],
+        });
+      }
 
-      setUser(localUser);
       navigate('/home', { replace: true });
-    } catch {
-      setError('Unable to continue. Please try again.');
+    } catch (err) {
+      setError(
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Unable to continue. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    setError('');
-    setIsLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      setUser({
-        uid: `local-google-${Date.now()}`,
-        email: 'google-user@campusconnect.local',
-        name: 'Google User',
-        github: 'google-user-github',
-        linkedin: 'google-user-linkedin',
-        portfolio: 'https://google-user-portfolio.dev',
-      });
-      navigate('/home', { replace: true });
-    } catch {
-      setError('Google Sign-In failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    setMessage('Google Sign-In is not connected yet. Use email/password login.');
   };
 
   return (

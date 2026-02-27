@@ -14,48 +14,109 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  username    String   @unique
-  email       String   @unique
-  password    String 
-  fullName    String
-  collegeName String   
-  headline    String?  // e.g. "CSE Student | Full Stack Dev"
-  about       String?  // bio....
-  tags        String[] // ["Alumni", "Coder", "WebDev"] (Postgres Array)
-  skills      String[] // ["React", "Node.js", "Python"]
+  id                        String   @id @default(uuid())
+  username                  String   @unique
+  email                     String   @unique
+  password                  String
+  fullName                  String?  @default("")
+  profileImageUrl           String?  @default("")
+  about                     String?  @default("")
+  tags                      String[] @default([])
+  skills                    String[] @default([])
+  interests                 String[] @default([])
+  socialLinks               Json?    @default("{}")
+  education                 Json?    @default("[]")
+  experience                Json?    @default("[]")
+  projects                  Json?    @default("[]")
+  profileCompletePercentage Int      @default(0)
 
-  socialLinks Json?    // { github: "...", linkedin: "...", website: "..." }
-  education   Json?    // [{ school: "IIT", degree: "B.Tech", year: "2026" }]
-  experience  Json?    // [{ company: "Google", role: "Intern", year: "2025" }]
-
-  posts       Post[]
-  threads     Thread[]
-  comments    Comment[]
-
-  likedPosts  PostLike[]
+  posts        Post[]
+  interviews   Interview[]
+  threads      Thread[]
+  comments     Comment[]
+  likedPosts   PostLike[]
   votedThreads ThreadVote[]
-
   savedPosts   SavedPost[]
   savedThreads SavedThread[]
 
-  createdAt   DateTime @default(now())
+  createdAt  DateTime     @default(now())
+  Assessment Assessment[]
 }
 
 model Post {
-  id          String   @id @default(uuid())
-  content     String
-  imageUrl    String?
-  collegeName String   
-  authorId    String
-  author      User     @relation(fields: [authorId], references: [id])
+  id       String @id @default(uuid())
+  caption  String
+  imageUrl String
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   // Interactions
-  likes       PostLike[]
-  comments    Comment[]
-  savedBy     SavedPost[]
+  likes    PostLike[]
+  comments Comment[]
+  savedBy  SavedPost[]
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+model Interview {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyName          String? @default("Practice")
+  jobRole              String? @default("SDE")
+  difficulty           String? @default("moderate")
+  interviewDurationSec Int     @default(0)
+  transcript           Json?   @default("[]")
+  metadata             Json?   @default("{}")
+
+  overallScore           Float
+  metricTechnical        Float
+  metricBehavioral       Float
+  metricCommunication    Float
+  metricProblemSolving   Float
+  metricCompanyKnowledge Float
+  topicsCovered          String[]
+
+  overallAssessment String @db.Text
+
+  keyStrengths        String[]
+  areasForImprovement String[]
+
+  recommendation Recommendation
+  reasoning      String         @db.Text
+
+  createdAt DateTime @default(now())
+}
+
+enum Recommendation {
+  STRONG_YES
+  YES
+  MAYBE
+  NO
+}
+
+model Assessment {
+  id          String  @id @default(uuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName String?
+  roleName    String?
+  difficulty  String?
+
+  overallScore    Float
+  correctAnswers  Int
+  totalQuestions  Int
+  metricTechnical Float?
+  metricAccuracy  Float?
+  topicsCovered   String[]
+  strengths       String[]
+  improvements    String   @db.Text
+  feedback        String   @db.Text
+
+  detailedAnalysis Json @default("[]")
+
+  createdAt DateTime @default(now())
 }
 
 model Thread {
@@ -63,70 +124,70 @@ model Thread {
   title       String
   description String
   tags        String[] // ["Doubt", "Placement", "Confession"]
-  collegeName String   
+  collegeName String
   authorId    String
-  author      User     @relation(fields: [authorId], references: [id])
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   // Interactions
-  upvotes     Int      @default(0)
-  downvotes   Int      @default(0)
-  votes       ThreadVote[]
+  upvotes   Int          @default(0)
+  downvotes Int          @default(0)
+  votes     ThreadVote[]
 
-  comments    Comment[]
-  savedBy     SavedThread[]
+  comments Comment[]
+  savedBy  SavedThread[]
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  content   String
-  
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
+  id      String @id @default(uuid())
+  content String
 
-  postId    String?
-  post      Post?    @relation(fields: [postId], references: [id])
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  threadId  String?
-  thread    Thread?  @relation(fields: [threadId], references: [id])
-  
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  threadId String?
+  thread   Thread? @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
   // Nested Replies
-  parentId  String?
-  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
-  replies   Comment[] @relation("CommentReplies")
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
 
   createdAt DateTime @default(now())
 }
 
 model PostLike {
-  id        String   @id @default(uuid())
-  userId    String
-  postId    String
-  user      User     @relation(fields: [userId], references: [id])
-  post      Post     @relation(fields: [postId], references: [id])
+  id     String @id @default(uuid())
+  userId String
+  postId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
 }
 
 model ThreadVote {
-  id        String   @id @default(uuid())
-  userId    String
-  threadId  String
-  type      VoteType
-  
-  user      User     @relation(fields: [userId], references: [id])
-  thread    Thread     @relation(fields: [threadId], references: [id])
+  id       String   @id @default(uuid())
+  userId   String
+  threadId String
+  type     VoteType
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@unique([userId, threadId])
 }
 
 model SavedPost {
-  id      String @id @default(uuid())
-  userId  String
-  postId  String
-  user    User   @relation(fields: [userId], references: [id])
-  post    Post   @relation(fields: [postId], references: [id])
+  id     String @id @default(uuid())
+  userId String
+  postId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
 }
@@ -135,8 +196,8 @@ model SavedThread {
   id       String @id @default(uuid())
   userId   String
   threadId String
-  user     User   @relation(fields: [userId], references: [id])
-  thread   Thread @relation(fields: [threadId], references: [id])
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread   Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@unique([userId, threadId])
 }

@@ -20,15 +20,20 @@ function CommentsModal({ postId, onClose }) {
     toggleThread,
   } = useCommentsController({ postId, user });
 
+  const getAuthorHandle = (author) => {
+    const raw = author?.username || author?.name || "anonymous";
+    return `@${String(raw).replace(/^@/, "").trim()}`;
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className={`w-full max-w-md rounded-2xl flex flex-col h-[85vh] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border ${theme === 'dark'
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div className={`w-full sm:max-w-md md:max-w-lg lg:max-w-xl rounded-t-2xl sm:rounded-2xl flex flex-col h-[88dvh] sm:h-[85vh] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border ${theme === 'dark'
         ? 'bg-slate-900 border-slate-700/60'
         : 'bg-white border-gray-200/60'
         }`}>
 
         {/* Header */}
-        <div className={`p-4 border-b flex justify-between items-center ${theme === 'dark'
+        <div className={`p-4 border-b flex justify-between items-center sticky top-0 z-10 ${theme === 'dark'
           ? 'bg-slate-800/60 border-slate-700/60'
           : 'bg-gray-50 border-gray-200/70'
           }`}>
@@ -43,7 +48,7 @@ function CommentsModal({ postId, onClose }) {
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
           {loading ? (
             <p className={`text-center py-10 ${theme === 'dark' ? 'text-slate-400' : 'text-gray-400'}`}>Loading...</p>
           ) : comments.length > 0 ? (
@@ -54,21 +59,26 @@ function CommentsModal({ postId, onClose }) {
                   className={`w-9 h-9 rounded-full object-cover border ${theme === 'dark' ? 'bg-slate-700 border-slate-600' : 'bg-gray-200 border-gray-100'}`}
                 />
 
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   {/* Parent Comment */}
-                  <div className="flex gap-2 items-baseline">
-                    <span className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-gray-900'}`}>{comment.author?.name}</span>
+                  <div className="flex gap-2 items-baseline flex-wrap">
+                    <span className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-gray-900'}`}>{getAuthorHandle(comment.author)}</span>
                     <span className={`text-sm leading-snug ${theme === 'dark' ? 'text-slate-200' : 'text-gray-800'}`}>{comment.text}</span>
                   </div>
 
                   {/* Action Line */}
                   <div className="flex items-center gap-4 mt-1">
                     <span className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-gray-600'}`}>
-                      {comment.createdAt?.seconds ? formatDistanceToNow(new Date(comment.createdAt.seconds * 1000), { addSuffix: false }) : "now"}
+                      {comment.createdAt
+                        ? formatDistanceToNow(
+                          new Date(comment.createdAt?.seconds ? comment.createdAt.seconds * 1000 : comment.createdAt),
+                          { addSuffix: false }
+                        )
+                        : "now"}
                     </span>
                     <button
-                      onClick={() => initiateReply(comment.id, comment.author?.name)}
-                      aria-label={`Reply to ${comment.author?.name}'s comment`}
+                      onClick={() => initiateReply(comment.id, comment.author?.username || comment.author?.name || "user")}
+                      aria-label={`Reply to ${getAuthorHandle(comment.author)}'s comment`}
                       className={`text-xs font-semibold transition ${theme === 'dark' ? 'text-slate-300 hover:text-slate-100' : 'text-gray-600 hover:text-gray-900'}`}
                     >
                       Reply
@@ -88,13 +98,13 @@ function CommentsModal({ postId, onClose }) {
                         </div>
                       ) : (
                         // 2. The Expanded Replies List
-                        <div className="space-y-4 mt-3">
+                        <div className="space-y-4 mt-3 pl-2 border-l border-slate-200/40 dark:border-slate-700/60">
                           {comment.replies.map((reply) => (
                             <div key={reply.id} className="flex gap-3">
-                              <img src={reply.author?.profile_pic} className={`w-7 h-7 rounded-full object-cover ${theme === 'dark' ? 'bg-slate-700' : 'bg-gray-200'}`} />
-                              <div className="flex-1">
-                                <div className="flex gap-2 items-baseline">
-                                  <span className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-gray-900'}`}>{reply.author?.name}</span>
+                              <img src={reply.author?.profile_pic || `${import.meta.env.VITE_AVATAR_API_URL}?name=${encodeURIComponent(reply.author?.name || "User")}&background=random&size=28`} className={`w-7 h-7 rounded-full object-cover ${theme === 'dark' ? 'bg-slate-700' : 'bg-gray-200'}`} />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex gap-2 items-baseline flex-wrap">
+                                  <span className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-gray-900'}`}>{getAuthorHandle(reply.author)}</span>
                                   {/* Auto-highlight the @Username if present */}
                                   <span className={`text-sm leading-snug ${theme === 'dark' ? 'text-slate-200' : 'text-gray-800'}`}>
                                     {reply.text.split(" ").map((word, i) =>
@@ -108,8 +118,8 @@ function CommentsModal({ postId, onClose }) {
                                     Reply
                                   </span>
                                   <button
-                                    onClick={() => initiateReply(comment.id, reply.author?.name)}
-                                    aria-label={`Reply to ${reply.author?.name}'s comment`}
+                                    onClick={() => initiateReply(comment.id, reply.author?.username || reply.author?.name || "user")}
+                                    aria-label={`Reply to ${getAuthorHandle(reply.author)}'s comment`}
                                     className={`text-xs font-semibold transition ${theme === 'dark' ? 'text-slate-300 hover:text-slate-100' : 'text-gray-600 hover:text-gray-900'}`}
                                   >
                                     Reply
@@ -140,7 +150,7 @@ function CommentsModal({ postId, onClose }) {
         </div>
 
         {/* Input Footer */}
-        <div className={`p-3 border-t transition-all ${theme === 'dark'
+        <div className={`p-3 border-t transition-all sticky bottom-0 ${theme === 'dark'
           ? 'bg-slate-900/60 border-slate-700/50'
           : 'bg-white/60 border-gray-200/50'
           } flex items-center gap-3`}>

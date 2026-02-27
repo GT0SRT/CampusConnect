@@ -68,8 +68,7 @@ export default function InterviewCallRoom({ onRouteStateChange }) {
 
     const { captions, liveCaption, isSpeaking, respondWithAI, stopInterviewAudio } = useVoiceInterviewer({
         isMicOn,
-        silenceMs: 7000,
-        maxUserResponseSec: 120,
+        silenceMs: 6000,
         onUserSilence: useCallback(async (userText, { respondWithAI, addCaption }) => {
             try {
                 // Check if user gave empty/very short response after end call prompt
