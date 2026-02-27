@@ -2,27 +2,19 @@ import { useState } from "react";
 import { CheckCircle2, XCircle, ArrowLeft, Brain } from "lucide-react";
 import AssessmentSetup from "@/components/assessment/AssessmentSetup";
 
-const AIAssessment = () => {
-  const [phase, setPhase] = useState("setup");
-import * as pdfjsLib from "pdfjs-dist";
-import Tesseract from "tesseract.js";
-
-const AI_API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 
 export default function AIAssessment() {
-  const [_file, setFile] = useState(null);
-  const [extractedText, setExtractedText] = useState("");
-  const [questionCount, setQuestionCount] = useState(5);
+  const [phase, setPhase] = useState("setup");
+  const AI_API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showAnswers, setShowAnswers] = useState(false);
 
   const handleGenerate = async (text, count) => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/api/assessment/generate", {
+      const response = await fetch(`${AI_API_BASE_URL}/api/assessment/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, count, type: "MCQ" }),
@@ -63,46 +55,6 @@ export default function AIAssessment() {
   if (phase === "setup") {
     return <AssessmentSetup onGenerate={handleGenerate} loading={loading} />;
   }
-  // Generate MCQs using backend
-  const generateQuestions = async () => {
-    if (!extractedText) return;
-
-    if (!AI_API_BASE_URL) {
-      alert("VITE_API_BASE_URL is not configured.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch(`${AI_API_BASE_URL}/generate_assessment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          company: "Tech Company",
-          role_name: "Software Engineer",
-          topics: extractedText.slice(0, 500),
-          difficulty: "moderate",
-          noOfQuestions: Number(questionCount),
-          totalTime: Number(questionCount) * 60,
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData?.detail || "Failed to generate assessment questions.");
-      }
-
-      const data = await response.json();
-
-      setQuestions(Array.isArray(data?.questions) ? data.questions : []);
-    } catch (error) {
-      alert(error?.message || "Failed to generate assessment questions.");
-      setQuestions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen p-4 pb-20">
@@ -193,15 +145,14 @@ export default function AIAssessment() {
                       >
                         <div className="flex items-start gap-3">
                           <span
-                            className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                              showAnswers && isAnswer
+                            className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${showAnswers && isAnswer
                                 ? "bg-success text-success-foreground"
                                 : showAnswers && isSelected && !isCorrect
-                                ? "bg-destructive text-destructive-foreground"
-                                : !showAnswers && isSelected
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-secondary text-muted-foreground"
-                            }`}
+                                  ? "bg-destructive text-destructive-foreground"
+                                  : !showAnswers && isSelected
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-secondary text-muted-foreground"
+                              }`}
                           >
                             {showAnswers && isAnswer ? (
                               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -253,5 +204,3 @@ export default function AIAssessment() {
     </div>
   );
 };
-
-export default AIAssessment;
