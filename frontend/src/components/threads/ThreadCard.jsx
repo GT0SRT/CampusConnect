@@ -12,6 +12,7 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
   const theme = useUserStore((state) => state.theme);
   const [isSaved, setIsSaved] = useState(userData?.savedThreads?.includes(thread.id) || false);
   const authorName = typeof thread.author === "object" ? thread.author.name : thread.author;
+  const authorUsername = typeof thread.author === "object" ? thread.author.username : "";
   const authorPic = typeof thread.author === "object" ? thread.author.profile_pic : "";
   const discussionCount = thread.Discussion?.length || 0;
   const netVotes = (thread.upvotes?.length || 0) - (thread.downvotes?.length || 0);
@@ -43,6 +44,12 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
         setVotingDown(false);
       }
     }
+  };
+
+  const handleAuthorClick = (e) => {
+    e.stopPropagation();
+    if (!authorUsername) return;
+    navigate(`/profile/${authorUsername}`);
   };
 
   const handleDeleteThread = async () => {
@@ -130,7 +137,13 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
               <div className="flex-1 min-w-0">
                 <h3 className={`text-lg font-bold mb-2 line-clamp-2 leading-tight ${theme === 'dark' ? 'text-white' : 'text-black'}`}>{thread.title}</h3>
                 <p className={`text-xs truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {authorName} • {thread.branch} • {thread.campus} • {thread.batch}
+                  <button
+                    type="button"
+                    onClick={handleAuthorClick}
+                    className={`hover:underline ${theme === 'dark' ? 'text-cyan-300' : 'text-cyan-700'}`}
+                  >
+                    @{authorUsername || "user"}
+                  </button>
                 </p>
               </div>
               {/* Bookmark button */}
@@ -148,11 +161,11 @@ export default function ThreadCard({ thread, isDetailedView, onVote, onThreadDel
             </div>
             <div className="flex items-center justify-between mt-2">
               <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 shrink-0 ${theme === 'dark'
-                ? 'bg-blue-900/30'
-                : 'bg-blue-50'
+                ? 'bg-cyan-900/30'
+                : 'bg-cyan-50'
                 }`}>
-                <MessageCircle size={14} className={theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} />
-                <span className={`text-xs font-semibold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>{discussionCount}</span>
+                <MessageCircle size={14} className={theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'} />
+                <span className={`text-xs font-semibold ${theme === 'dark' ? 'text-cyan-400' : 'text-cyan-600'}`}>{discussionCount}</span>
               </div>
               <span className="text-[11px] text-gray-500 dark:text-gray-400 ml-auto">{thread.createdAt?.toDate ? new Date(thread.createdAt.toDate()).toLocaleDateString() : "Recently"}</span>
             </div>

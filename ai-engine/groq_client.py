@@ -24,4 +24,4 @@ def chatbot(user_input: str):
         )
         return completion.choices[0].message.content
     except Exception as e:
-        return f"Chat Error: {str(e)}"
+        raise RuntimeError("Groq chat request failed") from e

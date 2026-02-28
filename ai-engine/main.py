@@ -1,9 +1,12 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import uvicorn
 import os
 import logging
+import uuid
+from datetime import datetime
 from dotenv import load_dotenv
 from gemini_client import process_image_with_gemini, generate_interview_prompt_with_gemini
 from interviewer import run_interview_chat
@@ -16,10 +19,22 @@ from Assesment import generate_interview_assessment_with_gemini, assess_candidat
 load_dotenv()
 app = FastAPI()
 logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
-frontend_origins = os.getenv(
-    "FRONTEND_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,https://c2net.vercel.app",
+required_env_vars = ["GEMINI_API_KEY", "GROQ_API_KEY"]
+missing_env_vars = [name for name in required_env_vars if not os.getenv(name)]
+if missing_env_vars:
+    logger.warning("Missing env vars: %s", ", ".join(missing_env_vars))
+
+service_api_key = os.getenv("AI_ENGINE_API_KEY", "").strip()
+
+frontend_origins = (
+    os.getenv("FRONTEND_ORIGINS")
+    or os.getenv("CORS_ORIGINS")
+    or "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,https://c2net.vercel.app"
 )
 allowed_origins = [origin.strip() for origin in frontend_origins.split(",") if origin.strip()]
 
@@ -30,6 +45,45 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def attach_request_id_and_optional_auth(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    public_paths = {"/", "/health"}
+
+    if service_api_key and request.url.path not in public_paths:
+        provided_api_key = request.headers.get("x-api-key", "")
+        if provided_api_key != service_api_key:
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    response = await call_next(request)
+    response.headers["x-request-id"] = request_id
+    return response
+
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "ok",
+        "service": "ai-engine",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+    }
+
+
+@app.get("/")
+async def root():
+    return {
+        "status": "ok",
+        "service": "ai-engine",
+        "message": "AI engine is running",
+    }
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception on %s: %s", request.url.path, exc)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 class ImageRequest(BaseModel):
     image: str

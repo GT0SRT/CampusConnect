@@ -12,7 +12,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globIgnores: ['**/InterviewCallRoom-*.js'],
+        globIgnores: ['**/InterviewCallRoom-*.js', '**/AIAssessment-*.js'],
       },
       manifest: {
         name: 'campus connect',

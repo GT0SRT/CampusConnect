@@ -4,40 +4,16 @@ import { ProfileHeader } from "./components/ProfileHeader";
 import { TabsSection } from "./components/TabsSection";
 import { CardRenderer } from "./components/CardRenderer";
 import { EditModal } from "./components/EditModal";
-import { ProfileRefreshingState, ProfileTabError, ProfileTabLoading } from "./components/ProfileTabState";
+import { ProfileRefreshingState, ProfileTabLoading } from "./components/ProfileTabState";
 import { EducationSection } from "./sections/EducationSection";
 import { ExperienceSection } from "./sections/ExperienceSection";
 import { SkillsSection } from "./sections/SkillsSection";
 import { InterestsSection } from "./sections/InterestsSection";
 import { ProjectsSection } from "./sections/ProjectsSection";
 
-const defaultProfile = {
-    fullName: "Campus User",
-    username: "campususer",
-    verified: false,
-    statusTag: "Student",
-    availability: "Available",
-    bio: "Add a short professional summary to help others know your goals and interests.",
-    education: [],
-    experience: [],
-    skills: ["C++"],
-    interests: [],
-    projects: [],
-    socialLinks: {
-        github: "github.com/campususer",
-        linkedin: "",
-        portfolio: "",
-    },
-    stats: {
-        posts: 0,
-        threads: 0,
-        karma: 0,
-    },
-};
-
 export default function ProfileDashboard({
     isMe = false,
-    profile = defaultProfile,
+    profile,
     theme = "dark",
     posts = [],
     threads = [],
@@ -57,27 +33,29 @@ export default function ProfileDashboard({
     renderSavedThread,
     isLoading = false,
     isRefreshing = false,
-    error = null,
-    onRetry,
 }) {
-    const mergedProfile = { ...defaultProfile, ...profile };
+    const mergedProfile = profile;
+    const postsCount = Array.isArray(posts) ? posts.length : 0;
+    const threadsCount = Array.isArray(threads) ? threads.length : 0;
+    const savedPostsCount = Array.isArray(savedPosts) ? savedPosts.length : 0;
+    const savedThreadsCount = Array.isArray(savedThreads) ? savedThreads.length : 0;
 
     const tabs = useMemo(() => {
         const baseTabs = [
-            { key: "posts", label: "Posts", icon: BookOpen },
-            { key: "threads", label: "Threads", icon: MessageSquare },
+            { key: "posts", label: `Posts (${postsCount})`, icon: BookOpen },
+            { key: "threads", label: `Threads (${threadsCount})`, icon: MessageSquare },
         ];
 
         if (isMe) {
             return [
                 ...baseTabs,
-                { key: "saved-posts", label: "Saved Posts", icon: Bookmark },
-                { key: "saved-threads", label: "Saved Threads", icon: Bookmark },
+                { key: "saved-posts", label: `Saved Posts (${savedPostsCount})`, icon: Bookmark },
+                { key: "saved-threads", label: `Saved Threads (${savedThreadsCount})`, icon: Bookmark },
             ];
         }
 
         return baseTabs;
-    }, [isMe]);
+    }, [isMe, postsCount, threadsCount, savedPostsCount, savedThreadsCount]);
 
     const [selectedTab, setSelectedTab] = useState("posts");
     const [expandedCardId, setExpandedCardId] = useState(null);
@@ -87,10 +65,6 @@ export default function ProfileDashboard({
     const renderTabCards = (items, renderFunction, emptyText, maxHeightClass, cardType, skeletonCount = 2) => {
         if (isLoading && items.length === 0) {
             return <ProfileTabLoading theme={theme} count={skeletonCount} />;
-        }
-
-        if (error && items.length === 0) {
-            return <ProfileTabError theme={theme} error={error} onRetry={onRetry} />;
         }
 
         return (
@@ -111,9 +85,9 @@ export default function ProfileDashboard({
     };
 
     const tabContent = {
-        posts: renderTabCards(posts, renderPost, "No posts yet.", "max-h-44 overflow-hidden", "post", 2),
+        posts: renderTabCards(posts, renderPost, "No posts yet. Create one.", "max-h-52 overflow-hidden", "post", 2),
         threads: renderTabCards(threads, renderThread, "No threads yet.", "max-h-52 overflow-hidden", "thread", 2),
-        "saved-posts": renderTabCards(savedPosts, renderSavedPost, "No saved posts yet.", "max-h-44 overflow-hidden", "saved-post", 2),
+        "saved-posts": renderTabCards(savedPosts, renderSavedPost, "No saved posts yet.", "max-h-52 overflow-hidden", "saved-post", 2),
         "saved-threads": renderTabCards(savedThreads, renderSavedThread, "No saved threads yet.", "max-h-52 overflow-hidden", "saved-thread", 2),
     };
 
@@ -125,33 +99,39 @@ export default function ProfileDashboard({
     const tabWrapTone = theme === "dark" ? "glass-surface border-slate-800/40" : "glass-surface border-slate-300/60";
     const tabInnerTone = theme === "dark" ? "border-slate-800 bg-slate-950/85" : "border-slate-300 bg-slate-100/70";
 
-    const socialItems = [
-        {
-            key: "github",
-            icon: Github,
-            value: mergedProfile.socialLinks?.github,
-            href: mergedProfile.socialLinks?.github
-                ? `https://github.com/${mergedProfile.socialLinks.github.replace(/^@/, "")}`
-                : "",
-            label: "GitHub",
-        },
-        {
-            key: "linkedin",
-            icon: Linkedin,
-            value: mergedProfile.socialLinks?.linkedin,
-            href: mergedProfile.socialLinks?.linkedin
-                ? `https://www.linkedin.com/in/${mergedProfile.socialLinks.linkedin.replace(/^@/, "")}`
-                : "",
-            label: "LinkedIn",
-        },
-        {
-            key: "portfolio",
-            icon: Globe,
-            value: mergedProfile.socialLinks?.portfolio,
-            href: mergedProfile.socialLinks?.portfolio || "",
-            label: "Portfolio",
-        },
-    ].filter((item) => item.value && item.href);
+    const knownIcons = {
+        github: Github,
+        linkedin: Linkedin,
+        portfolio: Globe,
+    };
+
+    const formatSocialHref = (key, value) => {
+        const raw = String(value || "").trim();
+        if (!raw) return "";
+
+        if (raw.startsWith("http://") || raw.startsWith("https://")) {
+            return raw;
+        }
+
+        if (key === "github") {
+            return `https://github.com/${raw.replace(/^@/, "")}`;
+        }
+
+        if (key === "linkedin") {
+            return `https://www.linkedin.com/in/${raw.replace(/^@/, "")}`;
+        }
+
+        return `https://${raw}`;
+    };
+
+    const socialItems = Object.entries(mergedProfile.socialLinks || {})
+        .map(([key, value]) => ({
+            key,
+            icon: knownIcons[key] || Globe,
+            href: formatSocialHref(key, value),
+            label: key.charAt(0).toUpperCase() + key.slice(1),
+        }))
+        .filter((item) => item.href);
 
     const sectionSaveMap = {
         education: onEducationSave,
@@ -168,6 +148,10 @@ export default function ProfileDashboard({
         }
         setEditingSection(null);
     };
+
+    if (!mergedProfile) {
+        return null;
+    }
 
     const editSectionMeta = {
         education: { title: "Education", items: mergedProfile.education || [] },

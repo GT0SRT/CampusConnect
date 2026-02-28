@@ -52,7 +52,7 @@ Interview inputs:
 - Candidate Resume Summary: {safe_resume}
 
 Required behavior for the generated system prompt:
-1) Real-life interview simulation with natural interviewer-candidate communication.
+1) Real-life interview simulation with natural interviewer-candidate communication & some name for interviewer.
 2) Voice-first style: concise responses, one question at a time, smooth transitions.
 3) Interview flow guidance: intro, resume/projects, core technical/role questions, behavioral, company motivation, closing.
 4) Strong adaptation rules based on candidate response quality.
@@ -133,5 +133,4 @@ def process_image_with_gemini(image_input: str, instruction: str = "concise"):
         return response.text
 
     except Exception as e:
-        print(f"Gemini Error: {e}")
-        return "error processing image"
+        raise RuntimeError("Gemini image processing failed") from e

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useUserStore } from "../store/useUserStore";
 import { useNavigate } from "react-router-dom";
+import { logout } from "../services/authService";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -9,11 +10,13 @@ export default function Settings() {
 
   const handleLogout = async () => {
     try {
-      await Promise.resolve();
-      clearUser();
-      navigate("/auth");
+      await logout();
     } catch (error) {
       console.error("Logout failed:", error);
+    } finally {
+      localStorage.removeItem("auth-token");
+      clearUser();
+      navigate("/auth", { replace: true });
     }
   };
 

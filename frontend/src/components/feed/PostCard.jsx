@@ -1,14 +1,12 @@
-import { useState, lazy, Suspense } from 'react';
-import { Heart, MessageCircle, Share2, Bookmark, Send, Trash2, MoreVertical } from 'lucide-react';
+import { useState } from 'react';
+import { Heart, MessageCircle, Share2, Bookmark, Trash2, MoreVertical } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { memo } from 'react';
-import { toggleBookmark, toggleLike, addComment } from '../../services/interactionService';
+import { toggleBookmark, toggleLike } from '../../services/interactionService';
 import { deletePost } from '../../services/postService';
 import { useUserStore } from '../../store/useUserStore';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
-
-// Lazy load modal
-const CommentsModal = lazy(() => import('../modals/CommentsModal'));
+import InlineCommentsSection from './InlineCommentsSection';
 
 function PostCard({ post, onPostDeleted, isPriority = false }) {
   const { user: userData, updateUser } = useUserStore();
@@ -16,12 +14,10 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
   const theme = useUserStore((state) => state.theme);
   const [isLiked, setIsLiked] = useState(post.likedBy?.includes(user?.uid) || false);
   const [likesCount, setLikesCount] = useState(post.likes || 0);
-  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [isSaved, setIsSaved] = useState(userData?.savedPosts?.includes(post.id) || false);
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showCommentInput, setShowCommentInput] = useState(false);
-  const [commentText, setCommentText] = useState("");
 
   const handleLike = async () => {
     if (!user) return alert("Please login to like");
@@ -74,23 +70,9 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
     }
   };
 
-  const handleCommentSubmit = async (e) => {
-    e.preventDefault();
-    if (!commentText.trim() || !user) return;
-
-    try {
-      await addComment(user.uid, post.id, commentText);
-      setCommentText("");
-      setShowCommentInput(false);
-      alert("Comment added!");
-    } catch (error) {
-      console.error("Comment failed", error);
-    }
-  };
-
   // Safe Date Formatting
-  const timeAgo = post.createdAt?.seconds
-    ? formatDistanceToNow(new Date(post.createdAt.seconds * 1000), { addSuffix: true })
+  const timeAgo = post.createdAt
+    ? formatDistanceToNow(new Date(post.createdAt?.seconds ? post.createdAt.seconds * 1000 : post.createdAt), { addSuffix: true })
     : "Just now";
 
   return (
@@ -112,10 +94,10 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
           height="40"
           className="w-10 h-10 rounded-full object-cover bg-gray-200 border border-gray-100"
         />
-        <div className="flex-1">
+        <div className="flex-1 cursor-pointer" onClick={() => window.location.href = `/profile/${post.author?.username || post.author?.id}`}>
           <p className={`font-semibold text-sm ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>{post.author?.name || "Anonymous"}</p>
           <p className={`text-xs font-medium ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-            {post.author?.campus || "General"} · {timeAgo}
+            @{post.author?.username || "user"} · {timeAgo}
           </p>
         </div>
 
@@ -203,7 +185,7 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
             {/* COMMENT TOGGLE */}
             <div className='flex flex-col items-center justify-center'>
               <button
-                onClick={() => setShowCommentsModal(true)}
+                onClick={() => setShowComments((prev) => !prev)}
                 aria-label="View comments"
                 className="hover:text-blue-500 transition"
               >
@@ -232,7 +214,7 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
         {/* Caption */}
         {post.caption && (
           <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-gray-200' : 'text-black'}`}>
-            <span className="font-semibold mr-2">{post.author?.name}</span>
+            {/* <span className="font-semibold mr-2">{post.author?.name}</span> */}
             {post.caption}
           </p>
         )}
@@ -248,36 +230,8 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
           </div>
         )}
 
-        {/* Comment Input Box (Hidden by default) */}
-        {showCommentInput && (
-          <form onSubmit={handleCommentSubmit} className="flex gap-2 items-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-            <input
-              type="text"
-              placeholder="Add a comment..."
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              className="flex-1 text-sm bg-gray-50 dark:bg-gray-700 border-none rounded-full px-4 py-2 focus:ring-1 focus:ring-blue-500 outline-none placeholder:text-gray-400 dark:placeholder-gray-300 text-gray-900 dark:text-white"
-            />
-            <button
-              type="submit"
-              disabled={!commentText.trim()}
-              className="text-blue-600 disabled:text-blue-300 font-semibold text-sm p-2"
-            >
-              Post
-            </button>
-          </form>
-        )}
+        {showComments ? <InlineCommentsSection postId={post.id} user={user} theme={theme} /> : null}
       </div>
-
-      {/* RENDER MODAL OUTSIDE THE CARD */}
-      {showCommentsModal && (
-        <Suspense fallback={null}>
-          <CommentsModal
-            postId={post.id}
-            onClose={() => setShowCommentsModal(false)}
-          />
-        </Suspense>
-      )}
     </div>
   );
 }

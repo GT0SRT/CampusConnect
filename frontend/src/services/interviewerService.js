@@ -1,8 +1,8 @@
-const API_BASE_URL = (import.meta.env.VITE_AI_ENGINE_BASE_URL || import.meta.env.VITE_API_BASE_URL)?.replace(/\/$/, "");
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 
 export async function generateInterviewPrompt({ company = "Tech Company", roleName = "Software Engineer", topics = "General", resumeSummary = "No resume provided", difficulty = "moderate" }) {
     if (!API_BASE_URL) {
-        throw new Error("VITE_AI_ENGINE_BASE_URL (or VITE_API_BASE_URL) is not configured");
+        throw new Error("VITE_API_BASE_URL is not configured");
     }
 
     const topicsText = Array.isArray(topics) ? topics.join(", ") : (topics || "General");
@@ -30,7 +30,7 @@ export async function generateInterviewPrompt({ company = "Tech Company", roleNa
 
 export async function getInterviewerReply({ message, history = [], company = "Tech Company", roleName = "Software Engineer", topics = "General", resumeSummary = "No resume provided", interviewDurationSec = 0, difficulty = "moderate", endCallPromptCount = 0, interviewPrompt = "" }) {
     if (!API_BASE_URL) {
-        throw new Error("VITE_AI_ENGINE_BASE_URL (or VITE_API_BASE_URL) is not configured");
+        throw new Error("VITE_API_BASE_URL is not configured");
     }
 
     const topicsText = Array.isArray(topics) ? topics.join(", ") : (topics || "General");
@@ -66,7 +66,6 @@ export async function getInterviewerReply({ message, history = [], company = "Te
     const data = await response.json();
     return {
         reply: data?.reply || "",
-        allottedTimeSec: Number(data?.allotted_time_sec) || 45,
         assessment: data?.assessment || {
             strengths: [],
             improvements: [],

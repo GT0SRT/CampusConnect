@@ -3,9 +3,10 @@ import { ArrowLeft, TrendingUp, Clock, CheckCircle, AlertCircle, Award, Target }
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useInterviewStore } from "../../store/useInterviewStore";
 import { useCallback, useEffect, useState } from "react";
+import { saveInterviewSummary } from "../../services/interviewHistoryService";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
-const API_BASE_URL = (import.meta.env.VITE_AI_ENGINE_BASE_URL || import.meta.env.VITE_API_BASE_URL)?.replace(/\/$/, "");
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
 
 export default function InterviewSummary({ interview, onBackToSetup }) {
   const theme = useUserStore((state) => state.theme);
@@ -31,7 +32,7 @@ export default function InterviewSummary({ interview, onBackToSetup }) {
     setAnalysisFetchError(false);
 
     try {
-      if (!API_BASE_URL) throw new Error("VITE_AI_ENGINE_BASE_URL (or VITE_API_BASE_URL) is not configured");
+      if (!API_BASE_URL) throw new Error("VITE_API_BASE_URL is not configured");
 
       const response = await fetch(`${API_BASE_URL}/analyze`, {
         method: "POST",
@@ -55,6 +56,17 @@ export default function InterviewSummary({ interview, onBackToSetup }) {
         analysis: data,
         status: "completed",
       });
+
+      if (!resolvedInterview.persistedRecordId) {
+        const savedRecord = await saveInterviewSummary({
+          interview: resolvedInterview,
+          analysis: data,
+        });
+
+        updateHistoryInterview(resolvedInterview.id, {
+          persistedRecordId: savedRecord?.id,
+        });
+      }
     } catch {
       updateHistoryInterview(resolvedInterview.id, {
         analysis: null,
@@ -65,6 +77,7 @@ export default function InterviewSummary({ interview, onBackToSetup }) {
       setIsFetchingAnalysis(false);
     }
   }, [
+    resolvedInterview,
     resolvedInterview?.id,
     resolvedInterview?.transcript,
     resolvedInterview?.role,
@@ -72,6 +85,36 @@ export default function InterviewSummary({ interview, onBackToSetup }) {
     resolvedInterview?.topics,
     resolvedInterview?.metadata?.resumeOverview,
     resolvedInterview?.duration,
+    resolvedInterview?.persistedRecordId,
+    updateHistoryInterview,
+  ]);
+
+  useEffect(() => {
+    if (!resolvedInterview?.id) return;
+    if (!resolvedInterview?.analysis) return;
+    if (resolvedInterview?.persistedRecordId) return;
+
+    const syncInterviewSummary = async () => {
+      try {
+        const savedRecord = await saveInterviewSummary({
+          interview: resolvedInterview,
+          analysis: resolvedInterview.analysis,
+        });
+
+        updateHistoryInterview(resolvedInterview.id, {
+          persistedRecordId: savedRecord?.id,
+        });
+      } catch (error) {
+        console.debug("Interview summary sync deferred", error);
+      }
+    };
+
+    syncInterviewSummary();
+  }, [
+    resolvedInterview,
+    resolvedInterview?.id,
+    resolvedInterview?.analysis,
+    resolvedInterview?.persistedRecordId,
     updateHistoryInterview,
   ]);
 

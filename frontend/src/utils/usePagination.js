@@ -24,10 +24,8 @@ export function usePagination(fetchFunction, itemsPerPage = 5) {
     const fetchItems = useCallback(async (page = 1, options = {}) => {
         const { preserveItems = false } = options;
         try {
-            const hasExistingItems = items.length > 0;
-
             if (page === 1) {
-                if (preserveItems && hasExistingItems) {
+                if (preserveItems) {
                     setIsRefreshing(true);
                 } else {
                     setIsLoading(true);
@@ -57,7 +55,7 @@ export function usePagination(fetchFunction, itemsPerPage = 5) {
             setIsRefreshing(false);
             setIsLoadingMore(false);
         }
-    }, [fetchFunction, itemsPerPage, items.length]);
+    }, [fetchFunction, itemsPerPage]);
 
     /**
      * Load next page of items
@@ -73,12 +71,15 @@ export function usePagination(fetchFunction, itemsPerPage = 5) {
      */
     const reset = useCallback(async (options = {}) => {
         const { preserveItems = false } = options;
-        if (!preserveItems) {
+        const shouldPreserveItems = preserveItems && items.length > 0;
+
+        if (!shouldPreserveItems) {
             setItems([]);
         }
+
         setCurrentPage(1);
-        await fetchItems(1, { preserveItems });
-    }, [fetchItems]);
+        await fetchItems(1, { preserveItems: shouldPreserveItems });
+    }, [fetchItems, items.length]);
 
     /**
      * Refetch current page

@@ -1,5 +1,4 @@
 import { Heart, BookmarkX } from "lucide-react";
-import { BaseCard } from "../../ui";
 import { getOptimizedImageUrl } from "../../../utils/imageOptimizer";
 
 export function ProfilePostCard({
@@ -26,20 +25,19 @@ export function ProfilePostCard({
         : null;
 
     return (
-        <BaseCard
+        <div
             onClick={() => onOpen?.(post)}
-            className={`group relative cursor-pointer p-3 ${cardTone}`}
+            className={`group relative cursor-pointer p-0 ${cardTone}`}
         >
             {thumbnail ? (
                 <img
                     src={thumbnail}
                     alt={post.caption || post.text || "Post image"}
-                    className="mb-3 h-44 w-full rounded-lg object-cover"
+                    className="aspect-square w-full rounded-md object-cover"
                     loading="lazy"
                 />
             ) : null}
-            <p className={`line-clamp-2 text-sm ${textTone}`}>{post.text || post.caption || "Campus post"}</p>
-            <p className={`mt-2 flex items-center gap-1 text-xs ${metaTone}`}>
+            <p className={`mt-1 flex items-center gap-1 text-[11px] ${metaTone}`}>
                 <Heart className="h-3.5 w-3.5" /> {post.likes || 0} likes
             </p>
 
@@ -50,11 +48,11 @@ export function ProfilePostCard({
                         event.stopPropagation();
                         onRemove?.(post.id);
                     }}
-                    className={`absolute right-3 top-3 flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium ${removeTone}`}
+                    className={`absolute right-2 top-2 flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium ${removeTone}`}
                 >
                     <BookmarkX className="h-3.5 w-3.5" /> Remove
                 </button>
             ) : null}
-        </BaseCard>
+        </div>
     );
 }

@@ -4,13 +4,15 @@ import {
   Home, Code, MessageCircle, User, LogOut, X, Settings as SettingsIcon,
   Handshake, Bot, UsersRound, Brain, ChevronDown
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/useUserStore";
+import { logout } from "../services/authService";
 
 const getLinkStyles = (isActive, theme) => {
   const base = "flex items-center gap-3 px-4 py-2 rounded-xl transition-all font-medium text-sm";
   if (isActive) {
-    return `${base} ${theme === 'dark' 
-      ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
+    return `${base} ${theme === 'dark'
+      ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
       : 'bg-cyan-100/50 text-cyan-700 border border-cyan-200/50'}`;
   }
   return `${base} ${theme === 'dark'
@@ -18,7 +20,7 @@ const getLinkStyles = (isActive, theme) => {
     : 'text-slate-600 hover:text-slate-900 hover:bg-gray-100/50'}`;
 };
 
-const Item = ({ to, label, Icon, theme, onItemClick, end=false }) => (
+const Item = ({ to, label, Icon, theme, onItemClick, end = false }) => (
   <NavLink to={to} end={end} onClick={onItemClick} className={({ isActive }) => getLinkStyles(isActive, theme)}>
     {Icon && <Icon className="w-5 h-5" />}
     <span>{label}</span>
@@ -26,7 +28,10 @@ const Item = ({ to, label, Icon, theme, onItemClick, end=false }) => (
 );
 
 export default function Sidebar({ onItemClick, onClose }) {
+  const navigate = useNavigate();
   const theme = useUserStore((state) => state.theme);
+  const user = useUserStore((state) => state.user);
+  const clearUser = useUserStore((state) => state.clearUser);
   const { pathname } = useLocation();
   const isAiActive = pathname.toLowerCase().startsWith("/interview");
   const [isPinned, setIsPinned] = useState(false);
@@ -34,11 +39,25 @@ export default function Sidebar({ onItemClick, onClose }) {
   const timerRef = useRef(null);
 
   const isMenuOpen = isPinned || isHovered;
+  const profileUsername = user?.username || user?.email?.split("@")[0] || "me";
+  const profileRoute = `/profile/${profileUsername}`;
 
   const handleHover = (open) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     if (open) setIsHovered(true);
     else timerRef.current = setTimeout(() => setIsHovered(false), 220);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {
+    } finally {
+      localStorage.removeItem("auth-token");
+      clearUser();
+      if (onItemClick) onItemClick();
+      navigate("/auth", { replace: true });
+    }
   };
 
   return (
@@ -59,14 +78,16 @@ export default function Sidebar({ onItemClick, onClose }) {
       <Item to="/squad" label="Squad" Icon={UsersRound} theme={theme} onItemClick={onItemClick} />
       <Item to="/AI-assessment" label="AI Assessment" Icon={Code} theme={theme} onItemClick={onItemClick} />
 
-      <div onMouseEnter={() => handleHover(true)} onMouseLeave={() => handleHover(false)}>
+      <div >
         <div className={getLinkStyles(isAiActive, theme)}>
           <NavLink to="/interview" onClick={onItemClick} className="flex flex-1 items-center gap-3">
             <Brain className="w-5 h-5" />
             <span>AI Interview</span>
           </NavLink>
-          <button 
+          <button
             onClick={(e) => { e.preventDefault(); setIsPinned(!isPinned); }}
+            onMouseEnter={() => handleHover(true)} 
+            onMouseLeave={() => handleHover(false)}
             className={`ml-2 rounded-md p-1 transition ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-gray-200'}`}
           >
             <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${isMenuOpen ? 'rotate-180' : ''}`} />
@@ -80,12 +101,20 @@ export default function Sidebar({ onItemClick, onClose }) {
         </div>
       </div>
 
-      <Item to="/profile" label="Profile" Icon={User} theme={theme} onItemClick={onItemClick} />
+      <Item to={profileRoute} label="Profile" Icon={User} theme={theme} onItemClick={onItemClick} />
       <Item to="/settings" label="Settings" Icon={SettingsIcon} theme={theme} onItemClick={onItemClick} />
 
-      <div className={`mt-auto pt-4 border-t ${theme === 'dark' ? 'border-slate-700/50' : 'border-gray-200/50'} flex items-center justify-between px-4`}>
-        <button className="text-red-600 text-sm font-semibold hover:opacity-80 transition">Logout</button>
-        <LogOut className="w-4 h-4 text-red-600" />
+      <div className={`mt-auto pt-4 border-t ${theme === 'dark' ? 'border-slate-700/50' : 'border-gray-200/50'} px-2`}>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition ${theme === 'dark'
+            ? 'text-red-400 hover:bg-red-500/10'
+            : 'text-red-600 hover:bg-red-50'}`}
+        >
+          <span>Logout</span>
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

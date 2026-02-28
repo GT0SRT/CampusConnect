@@ -11,10 +11,6 @@ export function useCreateThreadController({ user, onClose, onThreadCreated }) {
     const handleSubmit = async () => {
         if (!user) return alert("Please log in to create a thread.");
 
-        if (!user.name || !user.campus || !user.branch || !user.batch || !user.profile_pic) {
-            return alert("Please complete your profile first (name, campus, branch, batch, and profile picture are required).");
-        }
-
         if (!title.trim()) return alert("Please enter a title.");
         if (!category) return alert("Please select a category.");
         if (category === "other" && !customCategory.trim()) return alert("Please specify the category.");
