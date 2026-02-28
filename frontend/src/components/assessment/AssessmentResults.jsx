@@ -1,5 +1,6 @@
 import { CheckCircle2, XCircle, Trophy, Target, BookOpen, Star, ArrowLeft, TrendingUp, Lightbulb } from "lucide-react";
-import { useState } from "react";
+import { useState, createElement } from "react";
+import { useUserStore } from "../../store/useUserStore";
 
 const ScoreRing = ({ score }) => {
   const radius = 54;
@@ -24,8 +25,8 @@ const ScoreRing = ({ score }) => {
         />
         <defs>
           <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="hsl(175, 80%, 50%)" />
-            <stop offset="100%" stopColor="hsl(145, 65%, 45%)" />
+            <stop offset="0%" stopColor="hsl(var(--primary))" />
+            <stop offset="100%" stopColor="hsl(var(--success))" />
           </linearGradient>
         </defs>
       </svg>
@@ -38,11 +39,11 @@ const ScoreRing = ({ score }) => {
   );
 };
 
-const MetricBar = ({ label, value, icon: Icon }) => (
+const MetricBar = ({ label, value, icon }) => (
   <div className="space-y-2">
     <div className="flex items-center justify-between text-sm">
       <span className="flex items-center gap-2 text-muted-foreground">
-        <Icon className="w-4 h-4 text-primary" /> {label}
+        {createElement(icon, { className: "w-4 h-4 text-primary" })} {label}
       </span>
       <span className="font-semibold">{value}%</span>
     </div>
@@ -57,23 +58,24 @@ const MetricBar = ({ label, value, icon: Icon }) => (
 );
 
 const AssessmentResults = ({ result, onRestart }) => {
+  const theme = useUserStore((state) => state.theme);
   const [expandedQ, setExpandedQ] = useState(null);
 
   return (
-    <div className="min-h-screen p-4 pb-20">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div className={`min-h-screen p-4 pb-20 ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`}>
+      <div className="w-full max-w-3xl mx-auto space-y-6">
 
         {/* Header */}
         <div className="text-center animate-fade-in-up pt-8">
           <div
             style={{ background: "linear-gradient(90deg, #00eaff, #00c3ff)" }}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-black"
+            className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg ${theme === "dark" ? "text-white" : "text-black"}`}
           >
-            <Trophy className="w-4 h-4" style={{ color: "#00eaff" }} />
-            <span className="text-sm font-medium text-success">Assessment Complete</span>
+            <Trophy className="w-4 h-4" />
+            <span className="text-sm font-medium">Assessment Complete</span>
           </div>
 
-          <h1 className="text-3xl font-bold mb-1">Your Results</h1>
+          <h1 className={`text-3xl font-bold mb-1 ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`}>Your Results</h1>
           <p className="text-muted-foreground text-sm">
             {result.role_name} • {result.company} • {result.difficulty}
           </p>
@@ -105,7 +107,7 @@ const AssessmentResults = ({ result, onRestart }) => {
         {/* Topics */}
         <div className="glass-card p-6 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <BookOpen className="w-4 h-4" style={{ color: "#00eaff" }} /> Topics Covered
+            <BookOpen className="w-4 h-4 text-primary" /> Topics Covered
           </h3>
 
           <div className="flex flex-wrap gap-2">
@@ -123,13 +125,13 @@ const AssessmentResults = ({ result, onRestart }) => {
         {/* Strengths */}
         <div className="glass-card p-6 animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <Star className="w-4 h-4 text-warning" style={{ color: "#00eaff" }} /> Strengths
+            <Star className="w-4 h-4 text-warning" /> Strengths
           </h3>
 
           <ul className="space-y-2">
             {result.strengths.map((s, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-secondary-foreground">
-                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" style={{ color: "#00eaff" }} />
+                <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
                 {s}
               </li>
             ))}
@@ -145,7 +147,7 @@ const AssessmentResults = ({ result, onRestart }) => {
         {/* Feedback */}
         <div className="glass-card p-6 animate-fade-in-up" style={{ animationDelay: "0.35s" }}>
           <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <Lightbulb className="w-4 h-4" style={{ color: "#00eaff" }} /> AI Feedback
+            <Lightbulb className="w-4 h-4 text-warning" /> AI Feedback
           </h3>
 
           <p className="text-sm text-secondary-foreground leading-relaxed">
@@ -166,19 +168,24 @@ const AssessmentResults = ({ result, onRestart }) => {
                 >
                   <div className="flex items-center gap-3">
                     {qa.isCorrect ? (
-                      <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" style={{ color: "#00eaff" }} />
+                      <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
                     ) : (
-                      <XCircle className="w-5 h-5 text-destructive flex-shrink-0" style={{ color: "#00eaff" }} />
+                      <XCircle className="w-5 h-5 text-destructive shrink-0" />
                     )}
 
-                    <span className="text-sm font-medium line-clamp-1">
+                    <span className={`text-sm font-medium line-clamp-1 ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`}>
                       Q{i + 1}. {qa.question}
                     </span>
                   </div>
 
-                  <span className="text-xs text-muted-foreground px-2 py-1 rounded bg-secondary flex-shrink-0 ml-2">
-                    {qa.topic}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className={`text-[11px] font-semibold px-2 py-1 rounded ${qa.isCorrect ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}`}>
+                      {qa.isCorrect ? "Correct" : "Incorrect"}
+                    </span>
+                    <span className="text-xs text-muted-foreground px-2 py-1 rounded bg-secondary">
+                      {qa.topic}
+                    </span>
+                  </div>
                 </button>
 
                 {expandedQ === i && (
@@ -214,7 +221,7 @@ const AssessmentResults = ({ result, onRestart }) => {
             onClick={onRestart}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-all font-medium text-sm"
           >
-            <ArrowLeft className="w-4 h-4" style={{ color: "#00eaff" }} /> Start New Assessment
+            <ArrowLeft className="w-4 h-4" /> Start New Assessment
           </button>
         </div>
       </div>

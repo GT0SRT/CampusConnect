@@ -6,8 +6,7 @@ import { ProfileThreadCard } from "../components/profile/components/ProfileThrea
 import PostDetailModal from "../components/modals/PostDetailsModal";
 import EditProfileModal from "../components/modals/EditProfileModal";
 import { useUserStore } from "../store/useUserStore";
-import { mockUsers } from "../data/mockData";
-import { getUserProfile, syncEducationEntries, updateUserProfile } from "../services/userService";
+import { getPublicProfile, getUserProfile, syncEducationEntries, updateUserProfile } from "../services/userService";
 import { fetchProfileCollections, removeSavedPost, removeSavedThread } from "../services/profileService";
 
 function toDisplayStringList(value) {
@@ -85,6 +84,7 @@ export default function Profile() {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState(null);
+    const [publicUser, setPublicUser] = useState(null);
     const [collections, setCollections] = useState({
         posts: [],
         threads: [],
@@ -103,13 +103,8 @@ export default function Profile() {
             return user;
         }
 
-        return (
-            mockUsers.find((entry) => {
-                const entryUsername = entry.username || entry.email?.split("@")[0] || "";
-                return entryUsername.toLowerCase() === normalizedRouteUsername;
-            }) || null
-        );
-    }, [isMe, normalizedRouteUsername, user]);
+        return publicUser;
+    }, [isMe, publicUser, user]);
 
     const viewedUserId = viewedUser?.uid || viewedUser?.id || null;
     const fallbackKarma = viewedUser?.karma || 0;
@@ -158,21 +153,41 @@ export default function Profile() {
     }, [fallbackKarma, isMe, savedPostIds, savedThreadIds, updateUser, viewedUserId]);
 
     useEffect(() => {
-        if (!(user?.uid || user?.id)) {
-            navigate("/auth", { replace: true });
-        }
-    }, [navigate, user?.id, user?.uid]);
-
-    useEffect(() => {
         if (!routeUsername && currentUsername) {
             navigate(`/profile/${currentUsername}`, { replace: true });
         }
     }, [currentUsername, navigate, routeUsername]);
 
     useEffect(() => {
+        if (!normalizedRouteUsername || isMe) {
+            setPublicUser(null);
+            return;
+        }
+
+        let cancelled = false;
+
+        (async () => {
+            try {
+                const profile = await getPublicProfile(normalizedRouteUsername);
+                if (!cancelled) {
+                    setPublicUser(profile);
+                }
+            } catch {
+                if (!cancelled) {
+                    setPublicUser(null);
+                }
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isMe, normalizedRouteUsername]);
+
+    useEffect(() => {
         if (!viewedUserId) return;
         loadProfileData();
-    }, [viewedUserId]);
+    }, [loadProfileData, viewedUserId]);
 
     useEffect(() => {
         if (!isMe) return;

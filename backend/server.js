@@ -52,11 +52,13 @@ const postRoutes = require('./src/routes/postRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const threadRoutes = require('./src/routes/threadRoutes');
 const interviewRoutes = require('./src/routes/interviewRoutes');
+const assessmentsRoutes = require("./src/routes/assesmentsRoutes");
 const { notFound, errorHandler } = require("./src/middleware/errorMiddleware");
 
 // Use Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/assessments', assessmentsRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/threads', threadRoutes);
 app.use('/api/interviews', interviewRoutes);

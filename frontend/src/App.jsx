@@ -69,7 +69,6 @@ function App() {
         <Route path="/home" element={<Suspense fallback={null}><Home /></Suspense>} />
         <Route path="/threads" element={<Suspense fallback={null}><Threads /></Suspense>} />
         <Route path="/threads/:thread_id" element={<Suspense fallback={<PageLoader />}><ThreadView /></Suspense>} />
-        <Route path="/profile/:username" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
         <Route path="/matchmaker" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />
         <Route path="/squad" element={<Suspense fallback={<PageLoader />}><Squad /></Suspense>} />
         <Route path="/AI-assessment" element={<Suspense fallback={<PageLoader />}><AIAssessment /></Suspense>} />
@@ -84,6 +83,10 @@ function App() {
           <Route path="history" element={<InterviewHistory interviews={interviewHistory} />} />
           <Route path="history/:id" element={<InterviewSummary />} />
         </Route>
+      </Route>
+
+      <Route element={<MainLayout />}>
+        <Route path="/profile/:username" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
       </Route>
 
       <Route path="*" element={<Landing />} />

@@ -1,7 +1,7 @@
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import RightPanel from "./RightPannel";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { useEffect, useMemo, lazy, Suspense, useState } from "react";
 import { Info, X } from "lucide-react";
 import { useUserStore } from "../store/useUserStore";
@@ -11,10 +11,14 @@ import { useInterviewStore } from "../store/useInterviewStore";
 const GeminiBot = lazy(() => import("../components/AI/GeminiBot"));
 
 function MainLayout() {
+  const location = useLocation();
   const theme = useUserStore((state) => state.theme);
   const user = useUserStore((state) => state.user);
   const isInCall = useInterviewStore((state) => state.isInCall);
   const [hideProfileHint, setHideProfileHint] = useState(false);
+  const [assessmentPhase, setAssessmentPhase] = useState("setup");
+  const isAssessmentRoute = location.pathname.toLowerCase() === "/ai-assessment";
+  const isAssessmentFullscreen = isAssessmentRoute && assessmentPhase === "quiz";
 
   const isDark = useMemo(() => theme === "dark", [theme]);
 
@@ -31,6 +35,24 @@ function MainLayout() {
   useEffect(() => {
     setHideProfileHint(false);
   }, [user?.uid]);
+
+  useEffect(() => {
+    const onPhaseChange = (event) => {
+      const nextPhase = event?.detail?.phase;
+      if (nextPhase) {
+        setAssessmentPhase(nextPhase);
+      }
+    };
+
+    window.addEventListener("assessment-phase-change", onPhaseChange);
+    return () => window.removeEventListener("assessment-phase-change", onPhaseChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isAssessmentRoute) {
+      setAssessmentPhase("setup");
+    }
+  }, [isAssessmentRoute]);
 
   const profileCompletePercentage = user?.profileCompletePercentage ?? 0;
   const shouldShowProfileHint = Boolean(user?.uid) && profileCompletePercentage < 60 && !hideProfileHint;
@@ -62,15 +84,15 @@ function MainLayout() {
         ) : null}
 
         <div className="flex-1 max-w-7xl mx-auto w-full grid grid-cols-12 gap-6 px-4 py-6 overflow-auto [&::-webkit-scrollbar]:hidden">
-          <aside className={`col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden ${isInCall ? 'hidden' : ''}`}>
+          <aside className={`col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden ${isInCall || isAssessmentFullscreen ? 'hidden' : ''}`}>
             <Sidebar />
           </aside>
 
-          <main className="col-span-12 md:col-span-6 overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden">
+          <main className={`${isAssessmentFullscreen ? "col-span-12" : "col-span-12 md:col-span-6"} overflow-y-auto pr-2 [&::-webkit-scrollbar]:hidden`}>
             <Outlet />
           </main>
 
-          <aside className={`col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden ${isInCall ? 'hidden' : ''}`}>
+          <aside className={`col-span-3 hidden md:block overflow-y-auto [&::-webkit-scrollbar]:hidden ${isInCall || isAssessmentFullscreen ? 'hidden' : ''}`}>
             <RightPanel />
           </aside>
         </div>

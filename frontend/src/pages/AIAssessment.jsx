@@ -1,218 +1,236 @@
-import { useState } from "react";
-
-import { mockAssessmentResponse, mockAnalysisResult } from "@/data/mockAssessment";
+import { useEffect, useState } from "react";
 
 import AssessmentSetup from "@/components/assessment/AssessmentSetup";
 import AssessmentQuiz from "@/components/assessment/AssessmentQuiz";
 import AssessmentResults from "@/components/assessment/AssessmentResults";
-
+import { createAssessmentRecord, getAssessmentHistory } from "@/services/assessmentService";
 
 export default function AIAssessment() {
   const [phase, setPhase] = useState("setup");
   const AI_API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState([]);
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [showAnswers, setShowAnswers] = useState(false);
+  const [totalTime, setTotalTime] = useState(300);
+  const [analysis, setAnalysis] = useState(null);
+  const [assessmentInput, setAssessmentInput] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [assessmentHistory, setAssessmentHistory] = useState([]);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("assessment-phase-change", {
+        detail: { phase },
+      })
+    );
+
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("assessment-phase-change", {
+          detail: { phase: "setup" },
+        })
+      );
+    };
+  }, [phase]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+      try {
+        const history = await getAssessmentHistory();
+        if (!cancelled) {
+          setAssessmentHistory(history);
+        }
+      } catch (err) {
+        console.error("Failed to fetch assessment history:", err);
+      } finally {
+        if (!cancelled) {
+          setHistoryLoading(false);
+        }
+      }
+    };
+
+    loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const normalizeQuestions = (items = []) =>
+    items.map((item, index) => ({
+      id: item.id ?? index + 1,
+      question: item.question || "",
+      options: Array.isArray(item.options) ? item.options : [],
+      topic: item.topic || "General",
+      difficulty: item.difficulty || "moderate",
+    }));
+
+  const normalizeAnalysis = (result, fallback) => {
+    const detailed = result?.detailed_analysis || result?.questionsAnalysis || [];
+    const improvements = result?.improvements || [];
+
+    return {
+      company: result?.company || fallback?.company || "Tech Company",
+      role_name: result?.role_name || fallback?.role_name || "Software Engineer",
+      difficulty: result?.difficulty || fallback?.difficulty || "moderate",
+      overallScore: result?.overall_score ?? result?.overallScore ?? 0,
+      correctAnswers: result?.correct_answers ?? result?.correctAnswers ?? 0,
+      totalQuestions: result?.total_questions ?? result?.totalQuestions ?? detailed.length,
+      metrics: {
+        technicalKnowledge:
+          result?.metrics?.technical_knowledge ?? result?.metrics?.technicalKnowledge ?? 0,
+        accuracy: result?.metrics?.accuracy ?? 0,
+      },
+      topicsCovered: result?.topics_covered || result?.topicsCovered || [],
+      strengths: result?.strengths || [],
+      weaknesses: Array.isArray(improvements)
+        ? improvements.join(" ")
+        : (result?.weaknesses || ""),
+      feedback: result?.feedback || "",
+      questionsAnalysis: detailed.map((item) => {
+        const candidateAnswer = item.candidate_answer ?? item.candidateAnswer ?? "";
+        const correctAnswer = item.correct_answer ?? item.correctAnswer ?? "";
+        const explicitIsCorrect = item.is_correct ?? item.isCorrect;
+        const inferredIsCorrect =
+          String(candidateAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
+
+        return {
+          question: item.question,
+          candidateAnswer,
+          correctAnswer,
+          isCorrect: typeof explicitIsCorrect === "boolean" ? explicitIsCorrect : inferredIsCorrect,
+          solution: item.solution,
+          topic: item.topic || "General",
+        };
+      }),
+    };
+  };
 
   const handleStart = async (input) => {
     setLoading(true);
     try {
-      const response = await fetch(`${AI_API_BASE_URL}/api/assessment/generate`, {
+      if (!AI_API_BASE_URL) {
+        throw new Error("VITE_API_BASE_URL is not configured");
+      }
+
+      const response = await fetch(`${AI_API_BASE_URL}/generate_assessment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, count, type: "MCQ" }),
+        body: JSON.stringify(input),
       });
 
+      if (!response.ok) {
+        throw new Error(`Generate assessment failed: ${response.status}`);
+      }
+
       const data = await response.json();
-      setQuestions(data.questions);
-      setSelectedAnswers({});
-      setShowAnswers(false);
+      const normalizedQuestions = normalizeQuestions(data.questions || []);
+
+      if (!normalizedQuestions.length) {
+        throw new Error("No questions returned from ai-engine");
+      }
+
+      setQuestions(normalizedQuestions);
+      setTotalTime(data.total_time_sec || input.totalTime || 300);
+      setAssessmentInput(input);
       setPhase("quiz");
     } catch (err) {
-      console.error("Failed to generate:", err);
-      alert("Failed to connect to backend. Make sure your server is running on localhost:5000");
+      console.error("Failed to generate assessment from ai-engine:", err);
+      alert("Unable to generate questions from ai-engine. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-    // Simulate loading / Replace with actual API
-    await new Promise((r) => setTimeout(r, 1500));
-
-    const data = mockAssessmentResponse;
-
-    setQuestions(data.questions);
-    setTotalTime(input.totalTime);
-    setLoading(false);
-    setPhase("quiz");
-  };
-
   const handleSubmit = async (answers) => {
     setLoading(true);
+    try {
+      if (!AI_API_BASE_URL) {
+        throw new Error("VITE_API_BASE_URL is not configured");
+      }
 
-    // Simulate loading / Replace with actual API
-    await new Promise((r) => setTimeout(r, 2000));
+      const userResponses = questions.map((q) => answers[q.id] || "");
 
-    const data = mockAnalysisResult;
+      const response = await fetch(`${AI_API_BASE_URL}/assess_response`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(assessmentInput || {}),
+          user_responses: userResponses,
+          questions_asked: questions,
+        }),
+      });
 
-    setAnalysis(data);
-    setLoading(false);
-    setPhase("results");
+      if (!response.ok) {
+        throw new Error(`Assess response failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const normalizedResult = normalizeAnalysis(result, assessmentInput);
+      setAnalysis(normalizedResult);
+
+      try {
+        await createAssessmentRecord({
+          companyName: normalizedResult.company,
+          roleName: normalizedResult.role_name,
+          difficulty: normalizedResult.difficulty,
+          overallScore: normalizedResult.overallScore,
+          correctAnswers: normalizedResult.correctAnswers,
+          totalQuestions: normalizedResult.totalQuestions,
+          metrics: normalizedResult.metrics,
+          topicsCovered: normalizedResult.topicsCovered,
+          strengths: normalizedResult.strengths,
+          improvements: normalizedResult.weaknesses,
+          feedback: normalizedResult.feedback,
+          detailedAnalysis: normalizedResult.questionsAnalysis,
+        });
+
+        const history = await getAssessmentHistory();
+        setAssessmentHistory(history);
+      } catch (persistErr) {
+        console.error("Failed to persist assessment result:", persistErr);
+      }
+
+      setPhase("results");
+    } catch (err) {
+      console.error("Failed to analyze assessment from ai-engine:", err);
+      alert("Unable to analyze answers from ai-engine. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRestart = () => {
     setPhase("setup");
     setQuestions([]);
+    setTotalTime(300);
     setAnalysis(null);
     setAssessmentInput(null);
   };
 
-  return (
-    <div className="min-h-screen p-4 pb-20">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="text-center pt-8 mb-8 animate-fade-in-up">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
-            <Brain className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">
-              {showAnswers ? "Results" : "Assessment"}
-            </span>
-          </div>
+  if (phase === "setup") {
+    return (
+      <AssessmentSetup
+        onStart={handleStart}
+        loading={loading}
+        historyLoading={historyLoading}
+        latestAssessment={assessmentHistory[0] || null}
+      />
+    );
+  }
 
-          <h1 className="text-2xl font-bold mb-1">
-            <span className="gradient-text">
-              {showAnswers ? `Score: ${correctCount} / ${questions.length}` : "Answer the Questions"}
-            </span>
-          </h1>
+  if (phase === "quiz") {
+    return (
+      <AssessmentQuiz
+        questions={questions}
+        totalTime={totalTime}
+        onSubmit={handleSubmit}
+        loading={loading}
+      />
+    );
+  }
 
-          {showAnswers && (
-            <p className="text-muted-foreground text-sm mt-1">
-              {Math.round((correctCount / questions.length) * 100)}% accuracy
-            </p>
-          )}
-        </div>
-
-        {/* Score bar */}
-        {showAnswers && (
-          <div className="glass-card p-5 mb-6 animate-fade-in-up">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Overall Score</span>
-              <span className="font-bold text-primary">
-                {Math.round((correctCount / questions.length) * 100)}%
-              </span>
-            </div>
-
-            <div className="h-3 rounded-full bg-secondary overflow-hidden">
-              <div
-                className="h-full rounded-full animate-progress"
-                style={{
-                  width: `${(correctCount / questions.length) * 100}%`,
-                  background: "var(--gradient-primary)",
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Questions */}
-        <div className="space-y-5">
-          {questions.map((q, idx) => {
-            const selected = selectedAnswers[idx];
-            const isCorrect = selected === q.answer;
-
-            return (
-              <div
-                key={idx}
-                className="glass-card p-5 animate-fade-in-up"
-                style={{ animationDelay: `${idx * 0.05}s` }}
-              >
-                <p className="font-semibold text-sm mb-4">
-                  <span className="text-primary mr-2">Q{idx + 1}.</span>
-                  {q.question}
-                </p>
-
-                <div className="space-y-2">
-                  {q.options.map((opt, i) => {
-                    const isSelected = selected === opt;
-                    const isAnswer = q.answer === opt;
-
-                    let borderClass =
-                      "border-border bg-card hover:border-muted-foreground/30 hover:bg-secondary";
-
-                    if (showAnswers && isAnswer) {
-                      borderClass = "border-success/50 bg-success/10";
-                    } else if (showAnswers && isSelected && !isCorrect) {
-                      borderClass = "border-destructive/50 bg-destructive/10";
-                    } else if (!showAnswers && isSelected) {
-                      borderClass = "border-primary bg-primary/10 glow-border";
-                    }
-
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => selectAnswer(idx, opt)}
-                        disabled={showAnswers}
-                        className={`w-full text-left px-4 py-3 rounded-xl border transition-all duration-200 disabled:cursor-default ${borderClass}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span
-                            className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${showAnswers && isAnswer
-                                ? "bg-success text-success-foreground"
-                                : showAnswers && isSelected && !isCorrect
-                                  ? "bg-destructive text-destructive-foreground"
-                                  : !showAnswers && isSelected
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-secondary text-muted-foreground"
-                              }`}
-                          >
-                            {showAnswers && isAnswer ? (
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                            ) : showAnswers && isSelected && !isCorrect ? (
-                              <XCircle className="w-3.5 h-3.5" />
-                            ) : (
-                              String.fromCharCode(65 + i)
-                            )}
-                          </span>
-
-                          <span className="text-sm leading-relaxed">{opt}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {showAnswers && (
-                  <p className="mt-3 text-xs text-success flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Answer: {q.answer}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Bottom Action Buttons */}
-        <div className="mt-8 flex items-center justify-center gap-4 animate-fade-in-up">
-          {!showAnswers ? (
-            <button
-              onClick={handleSubmit}
-              disabled={!allAnswered}
-              className="px-8 py-3 rounded-lg font-semibold text-primary-foreground disabled:opacity-40 transition-all"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              Submit Assessment
-            </button>
-          ) : (
-            <button
-              onClick={handleRestart}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-all font-medium text-sm"
-            >
-              <ArrowLeft className="w-4 h-4" /> New Assessment
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
+  return <AssessmentResults result={analysis} onRestart={handleRestart} />;
+}

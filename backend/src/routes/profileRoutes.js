@@ -2,6 +2,8 @@ const router = require("express").Router();
 const auth = require("../middleware/authMiddleware");
 const ctrl = require("../controllers/profileController");
 
+router.get("/public/:username", ctrl.getPublicProfile);
+
 router.get("/me", auth, ctrl.getProfile);
 router.put("/me", auth, ctrl.updateProfile);
 

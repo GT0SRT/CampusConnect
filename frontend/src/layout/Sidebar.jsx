@@ -39,6 +39,7 @@ export default function Sidebar({ onItemClick, onClose }) {
   const timerRef = useRef(null);
 
   const isMenuOpen = isPinned || isHovered;
+  const isMobileDrawer = typeof onClose === "function";
   const profileUsername = user?.username || user?.email?.split("@")[0] || "me";
   const profileRoute = `/profile/${profileUsername}`;
 
@@ -61,7 +62,13 @@ export default function Sidebar({ onItemClick, onClose }) {
   };
 
   return (
-    <div className={`glass-surface h-full w-full md:rounded-2xl p-4 space-y-4 flex flex-col transition-all ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
+    <div
+      className={`h-full w-full md:rounded-2xl p-4 space-y-4 flex flex-col transition-all ${
+        isMobileDrawer
+          ? "bg-white opacity-100 text-slate-900"
+          : `glass-surface ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`
+      }`}
+    >
       <div className="flex md:hidden mb-10 justify-between items-center">
         <div className="flex items-center gap-2 font-semibold">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500 shadow-lg shadow-cyan-500/20">

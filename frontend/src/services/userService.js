@@ -61,6 +61,16 @@ export async function getUserProfile() {
     return normalizeUserResponse(response.data);
 }
 
+export async function getPublicProfile(username) {
+    const normalizedUsername = String(username || "").trim();
+    if (!normalizedUsername) {
+        throw new Error("username is required");
+    }
+
+    const response = await api.get(`/profile/public/${encodeURIComponent(normalizedUsername)}`);
+    return normalizeUserResponse(response.data);
+}
+
 function normalizeEducationItem(item) {
     return {
         id: item?.id,

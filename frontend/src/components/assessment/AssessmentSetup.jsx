@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Brain, Zap, Clock, Hash, Building2, Briefcase, BookOpen } from "lucide-react";
+import { useUserStore } from "../../store/useUserStore";
 
-const AssessmentSetup = ({ onStart, loading }) => {
+const AssessmentSetup = ({ onStart, loading, historyLoading = false, latestAssessment = null }) => {
+  const theme = useUserStore((state) => state.theme);
   const [form, setForm] = useState({
     company: "",
     role_name: "",
@@ -21,45 +23,30 @@ const AssessmentSetup = ({ onStart, loading }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-lg animate-fade-in-up">
+    <div className={`min-h-screen flex items-center justify-center p-4 ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`}>
+      <div className={`w-full max-w-3xl mx-auto animate-fade-in-up ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`}>
 
         {/* Header */}
         <div className="text-center mb-8">
-          <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6"
-            style={{
-              background: "rgba(0, 234, 255, 0.15)",   // soft cyan
-              border: "1px solid rgba(0, 234, 255, 0.3)"
-            }}
-          >
-            <Brain className="w-4 h-4" style={{ color: "#00eaff" }} />
-            <span className="text-sm font-medium" style={{ color: "#000" }}>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
+            <Brain className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-primary">
               AI Assessment
             </span>
           </div>
-          <h1 className="text-3xl font-bold mb-2">
+          <h1 className={`text-3xl font-bold mb-2 ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`}>
             <span className="gradient-text">Configure Your Assessment</span>
           </h1>
           <p className="text-muted-foreground">Set up parameters to generate AI-powered questions</p>
         </div>
 
         {/* Form */}
-          <form
-            onSubmit={handleSubmit}
-            className="p-6 space-y-5 rounded-2xl"
-            style={{
-              background: "rgba(255, 255, 255, 0.6)",     // soft white card
-              border: "1px solid rgba(0, 0, 0, 0.1)",      // light border
-              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",    // soft shadow
-              backdropFilter: "blur(10px)",                // glass subtle effect
-            }}
-          >
+        <form onSubmit={handleSubmit} className="glass-card p-6 space-y-5 rounded-2xl">
 
           {/* Company */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
-              <Building2 className="w-4 h-4" style={{ color: "#00eaff" }} /> Company
+              <Building2 className="w-4 h-4 text-primary" /> Company
             </label>
             <input
               type="text"
@@ -74,7 +61,7 @@ const AssessmentSetup = ({ onStart, loading }) => {
           {/* Role */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
-              <Briefcase className="w-4 h-4" style={{ color: "#00eaff" }} /> Role Name
+              <Briefcase className="w-4 h-4 text-primary" /> Role Name
             </label>
             <input
               type="text"
@@ -89,7 +76,7 @@ const AssessmentSetup = ({ onStart, loading }) => {
           {/* Topics */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
-              <BookOpen className="w-4 h-4" style={{ color: "#00eaff" }} /> Topics
+              <BookOpen className="w-4 h-4 text-primary" /> Topics
             </label>
             <input
               type="text"
@@ -104,7 +91,7 @@ const AssessmentSetup = ({ onStart, loading }) => {
           {/* Difficulty */}
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
-              <Zap className="w-4 h-4" style={{ color: "#00eaff" }} /> Difficulty
+              <Zap className="w-4 h-4 text-primary" /> Difficulty
             </label>
             <div className="flex gap-2">
               {["easy", "moderate", "hard"].map((d) => (
@@ -112,14 +99,11 @@ const AssessmentSetup = ({ onStart, loading }) => {
                   type="button"
                   key={d}
                   onClick={() => update("difficulty", d)}
-                  style={form.difficulty === d ? {
-                    background: "linear-gradient(90deg, #00eaff, #00c3ff)"
-                  } : {}}
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium capitalize transition-all ${
-                    form.difficulty === d
-                      ? "text-black"
-                      : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-                  }`}
+                  style={form.difficulty === d ? { background: "linear-gradient(90deg, #00eaff, #00c3ff)" } : {}}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium capitalize transition-all ${form.difficulty === d
+                    ? `${theme === "dark" ? "text-white" : "text-black"}`
+                    : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                    }`}
                 >
                   {d}
                 </button>
@@ -133,7 +117,7 @@ const AssessmentSetup = ({ onStart, loading }) => {
             {/* Number of questions */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
-                <Hash className="w-4 h-4" style={{ color: "#00eaff" }} /> Questions
+                <Hash className="w-4 h-4 text-primary" /> Questions
               </label>
               <input
                 type="number"
@@ -151,7 +135,7 @@ const AssessmentSetup = ({ onStart, loading }) => {
             {/* Time */}
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
-                <Clock className="w-4 h-4" style={{ color: "#00eaff" }} /> Time (seconds)
+                <Clock className="w-4 h-4 text-primary" /> Time (seconds)
               </label>
               <input
                 type="number"
@@ -171,18 +155,34 @@ const AssessmentSetup = ({ onStart, loading }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-lg font-semibold text-primary-foreground transition-all disabled:opacity-50"
+            className={`w-full py-3.5 rounded-lg font-semibold transition-all disabled:opacity-50 ${theme === "dark" ? "text-white" : "text-black"}`}
             style={{ background: "linear-gradient(90deg, #00eaff, #00c3ff)" }}
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                <span className={`w-4 h-4 border-2 rounded-full animate-spin ${theme === "dark" ? "border-white/40 border-t-white" : "border-black/40 border-t-black"}`} />
                 Generating...
               </span>
             ) : (
               "Generate Assessment"
             )}
           </button>
+
+          {(historyLoading || latestAssessment) && (
+            <div className="rounded-lg border border-border bg-secondary/40 p-3 text-sm">
+              {historyLoading ? (
+                <p className="text-muted-foreground">Loading your latest assessment...</p>
+              ) : (
+                <p className="text-muted-foreground">
+                  Last: <span className="text-foreground font-medium">{latestAssessment?.company}</span>
+                  {" • "}
+                  <span className="text-foreground font-medium">{latestAssessment?.role_name}</span>
+                  {" • Score: "}
+                  <span className="text-foreground font-medium">{latestAssessment?.overallScore}</span>
+                </p>
+              )}
+            </div>
+          )}
         </form>
       </div>
     </div>

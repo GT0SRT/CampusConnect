@@ -368,6 +368,26 @@ const sanitizeUser = (user) => ({
   createdAt: user.createdAt,
 });
 
+const sanitizePublicUser = (user) => ({
+  id: user.id,
+  uid: user.id,
+  username: user.username,
+  fullName: user.fullName,
+  profileImageUrl: user.profileImageUrl,
+  collegeName: user.collegeName,
+  headline: user.headline,
+  about: user.about,
+  tags: user.tags,
+  skills: user.skills,
+  interests: user.interests,
+  socialLinks: user.socialLinks,
+  education: user.education,
+  experience: user.experience,
+  projects: user.projects,
+  profileCompletePercentage: user.profileCompletePercentage ?? 0,
+  createdAt: user.createdAt,
+});
+
 // Get Profile
 exports.getProfile = async (req, res) => {
   try {
@@ -380,6 +400,33 @@ exports.getProfile = async (req, res) => {
     }
 
     res.json(sanitizeUser(user));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getPublicProfile = async (req, res) => {
+  try {
+    const username = toTrimmedString(req.params.username).toLowerCase();
+
+    if (!username) {
+      return res.status(400).json({ error: "username is required" });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        username: {
+          equals: username,
+          mode: "insensitive",
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(sanitizePublicUser(user));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
