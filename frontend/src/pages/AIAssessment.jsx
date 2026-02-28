@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { CheckCircle2, XCircle, ArrowLeft, Brain } from "lucide-react";
+
+import { mockAssessmentResponse, mockAnalysisResult } from "@/data/mockAssessment";
+
 import AssessmentSetup from "@/components/assessment/AssessmentSetup";
+import AssessmentQuiz from "@/components/assessment/AssessmentQuiz";
+import AssessmentResults from "@/components/assessment/AssessmentResults";
 
 
 export default function AIAssessment() {
@@ -11,7 +15,7 @@ export default function AIAssessment() {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showAnswers, setShowAnswers] = useState(false);
 
-  const handleGenerate = async (text, count) => {
+  const handleStart = async (input) => {
     setLoading(true);
     try {
       const response = await fetch(`${AI_API_BASE_URL}/api/assessment/generate`, {
@@ -33,28 +37,36 @@ export default function AIAssessment() {
     }
   };
 
-  const selectAnswer = (qIdx, option) => {
-    if (showAnswers) return;
-    setSelectedAnswers((prev) => ({ ...prev, [qIdx]: option }));
+    // Simulate loading / Replace with actual API
+    await new Promise((r) => setTimeout(r, 1500));
+
+    const data = mockAssessmentResponse;
+
+    setQuestions(data.questions);
+    setTotalTime(input.totalTime);
+    setLoading(false);
+    setPhase("quiz");
   };
 
-  const handleSubmit = () => {
-    setShowAnswers(true);
+  const handleSubmit = async (answers) => {
+    setLoading(true);
+
+    // Simulate loading / Replace with actual API
+    await new Promise((r) => setTimeout(r, 2000));
+
+    const data = mockAnalysisResult;
+
+    setAnalysis(data);
+    setLoading(false);
+    setPhase("results");
   };
 
   const handleRestart = () => {
     setPhase("setup");
     setQuestions([]);
-    setSelectedAnswers({});
-    setShowAnswers(false);
+    setAnalysis(null);
+    setAssessmentInput(null);
   };
-
-  const correctCount = questions.filter((q, i) => selectedAnswers[i] === q.answer).length;
-  const allAnswered = Object.keys(selectedAnswers).length === questions.length;
-
-  if (phase === "setup") {
-    return <AssessmentSetup onGenerate={handleGenerate} loading={loading} />;
-  }
 
   return (
     <div className="min-h-screen p-4 pb-20">
