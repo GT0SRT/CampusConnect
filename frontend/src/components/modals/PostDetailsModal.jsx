@@ -1,5 +1,4 @@
 import PostCard from "../feed/PostCard";
-
 import { useUserStore } from "../../store/useUserStore";
 import { BaseModal } from "../ui";
 
@@ -12,11 +11,10 @@ export default function PostDetailModal({ post, onClose }) {
       open
       onClose={onClose}
       theme={theme}
-      maxWidthClass="max-w-lg"
+      maxWidthClass="max-w-3xl"
       contentClassName="max-h-[90vh] overflow-y-auto p-0 [&::-webkit-scrollbar]:hidden"
-      hideCloseButton
     >
-      <PostCard post={post} />
+      <PostCard post={post} imageDisplayMode="contain" />
     </BaseModal>
   );
 }

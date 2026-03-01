@@ -71,6 +71,12 @@ export async function getPublicProfile(username) {
     return normalizeUserResponse(response.data);
 }
 
+export async function getDiscoverProfiles() {
+    const response = await api.get("/profile/discover");
+    const payload = Array.isArray(response.data) ? response.data : [];
+    return payload.map(normalizeUserResponse);
+}
+
 function normalizeEducationItem(item) {
     return {
         id: item?.id,

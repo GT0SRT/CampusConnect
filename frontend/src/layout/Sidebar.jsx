@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  Home, Code, MessageCircle, User, LogOut, X, Settings as SettingsIcon,
+  Home, Code, ScrollText, User, LogOut, X, Settings as SettingsIcon,
   Handshake, Bot, UsersRound, Brain, ChevronDown
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -63,11 +63,10 @@ export default function Sidebar({ onItemClick, onClose }) {
 
   return (
     <div
-      className={`h-full w-full md:rounded-2xl p-4 space-y-4 flex flex-col transition-all ${
-        isMobileDrawer
-          ? "bg-white opacity-100 text-slate-900"
-          : `glass-surface ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`
-      }`}
+      className={`h-full w-full md:rounded-2xl p-4 space-y-4 flex flex-col transition-all ${isMobileDrawer
+        ? `${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'} opacity-100`
+        : `glass-surface ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`
+        }`}
     >
       <div className="flex md:hidden mb-10 justify-between items-center">
         <div className="flex items-center gap-2 font-semibold">
@@ -80,7 +79,7 @@ export default function Sidebar({ onItemClick, onClose }) {
       </div>
 
       <Item to="/home" label="Home" Icon={Home} theme={theme} onItemClick={onItemClick} />
-      <Item to="/threads" label="Threads" Icon={MessageCircle} theme={theme} onItemClick={onItemClick} />
+      <Item to="/threads" label="Threads" Icon={ScrollText} theme={theme} onItemClick={onItemClick} />
       <Item to="/matchmaker" label="AI Matchmaker" Icon={Bot} theme={theme} onItemClick={onItemClick} />
       <Item to="/squad" label="Squad" Icon={UsersRound} theme={theme} onItemClick={onItemClick} />
       <Item to="/AI-assessment" label="AI Assessment" Icon={Code} theme={theme} onItemClick={onItemClick} />
@@ -93,7 +92,7 @@ export default function Sidebar({ onItemClick, onClose }) {
           </NavLink>
           <button
             onClick={(e) => { e.preventDefault(); setIsPinned(!isPinned); }}
-            onMouseEnter={() => handleHover(true)} 
+            onMouseEnter={() => handleHover(true)}
             onMouseLeave={() => handleHover(false)}
             className={`ml-2 rounded-md p-1 transition ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-gray-200'}`}
           >

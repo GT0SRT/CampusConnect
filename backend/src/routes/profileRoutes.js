@@ -6,6 +6,7 @@ router.get("/public/:username", ctrl.getPublicProfile);
 
 router.get("/me", auth, ctrl.getProfile);
 router.put("/me", auth, ctrl.updateProfile);
+router.get("/discover", auth, ctrl.getDiscoverProfiles);
 
 router.get("/", auth, ctrl.getProfile);
 router.put("/", auth, ctrl.updateProfile);

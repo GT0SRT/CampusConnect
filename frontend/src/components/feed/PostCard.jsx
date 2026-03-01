@@ -8,7 +8,7 @@ import { useUserStore } from '../../store/useUserStore';
 import { getOptimizedImageUrl } from '../../utils/imageOptimizer';
 import InlineCommentsSection from './InlineCommentsSection';
 
-function PostCard({ post, onPostDeleted, isPriority = false }) {
+function PostCard({ post, onPostDeleted, isPriority = false, onOpenDetails, imageDisplayMode = 'cover' }) {
   const { user: userData, updateUser } = useUserStore();
   const user = userData;
   const theme = useUserStore((state) => state.theme);
@@ -147,23 +147,54 @@ function PostCard({ post, onPostDeleted, isPriority = false }) {
 
       {/* Image */}
       {post.imageUrl && (
-        <div className="w-full aspect-4/3 bg-gray-50 dark:bg-gray-700 overflow-hidden">
-          <img
-            src={getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'feed')}
-            srcSet={`
-              ${getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'feed')} 800w,
-              ${getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'post')} 1200w
-            `}
-            sizes="(max-width: 768px) 100vw, 800px"
-            alt={post.caption || `Post by ${post.author?.name || "User"}`}
-            width="600"
-            height="450"
-            className="w-full h-full object-cover"
-            loading={isPriority ? "eager" : "lazy"}
-            fetchPriority={isPriority ? "high" : "auto"}
-            decoding="async"
-          />
-        </div>
+        onOpenDetails ? (
+          <button
+            type="button"
+            onClick={() => onOpenDetails(post)}
+            className={`w-full overflow-hidden text-left ${imageDisplayMode === 'contain'
+                ? 'bg-gray-50 dark:bg-gray-700 p-2'
+                : 'aspect-4/3 bg-gray-50 dark:bg-gray-700'
+              }`}
+            aria-label="Open full image"
+          >
+            <img
+              src={getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'feed')}
+              srcSet={`
+                ${getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'feed')} 800w,
+                ${getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'post')} 1200w
+              `}
+              sizes="(max-width: 768px) 100vw, 800px"
+              alt={post.caption || `Post by ${post.author?.name || "User"}`}
+              width="600"
+              height="450"
+              className={imageDisplayMode === 'contain' ? 'w-full max-h-[82vh] object-contain' : 'w-full h-full object-cover'}
+              loading={isPriority ? "eager" : "lazy"}
+              fetchPriority={isPriority ? "high" : "auto"}
+              decoding="async"
+            />
+          </button>
+        ) : (
+          <div className={`w-full overflow-hidden ${imageDisplayMode === 'contain'
+              ? 'bg-gray-50 dark:bg-gray-700 p-2'
+              : 'aspect-4/3 bg-gray-50 dark:bg-gray-700'
+            }`}>
+            <img
+              src={getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'feed')}
+              srcSet={`
+                ${getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'feed')} 800w,
+                ${getOptimizedImageUrl(post.imageUrl.slice(0, -3) + "webp", 'post')} 1200w
+              `}
+              sizes="(max-width: 768px) 100vw, 800px"
+              alt={post.caption || `Post by ${post.author?.name || "User"}`}
+              width="600"
+              height="450"
+              className={imageDisplayMode === 'contain' ? 'w-full max-h-[82vh] object-contain' : 'w-full h-full object-cover'}
+              loading={isPriority ? "eager" : "lazy"}
+              fetchPriority={isPriority ? "high" : "auto"}
+              decoding="async"
+            />
+          </div>
+        )
       )}
 
       {/* Actions */}

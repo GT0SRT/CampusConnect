@@ -1,9 +1,12 @@
 import CreateModal from "../components/modals/CreateModal";
+import PostDetailModal from "../components/modals/PostDetailsModal";
 import FeedTabs from "../components/feed/FeedTabs";
 import PostCard from "../components/feed/PostCard";
 import { useHomeFeedController } from "../hooks/useHomeFeedController";
+import { useState } from "react";
 
 export default function Home() {
+  const [selectedPost, setSelectedPost] = useState(null);
   const {
     user,
     theme,
@@ -13,7 +16,6 @@ export default function Home() {
     isLoadingMore,
     error,
     hasMore,
-    total,
     activeTab,
     setActiveTab,
     isModalOpen,
@@ -61,6 +63,7 @@ export default function Home() {
                 post={post}
                 onPostDeleted={reset}
                 isPriority={index < 3}
+                onOpenDetails={setSelectedPost}
               />
             ))}
             {/* Load More Button */}
@@ -80,7 +83,7 @@ export default function Home() {
                       Loading...
                     </>
                   ) : (
-                    total > 0 ? `Load More (${posts.length}/${total})` : `Load More (${posts.length})`
+                    "Load more"
                   )}
                 </button>
               </div>
@@ -118,6 +121,10 @@ export default function Home() {
           onPostCreated={handlePostCreated}
         />
       )}
+
+      {selectedPost ? (
+        <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+      ) : null}
     </div>
   );
 }

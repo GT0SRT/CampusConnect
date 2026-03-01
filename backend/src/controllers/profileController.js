@@ -285,7 +285,7 @@ const buildProfileUpdateData = (payload = {}) => {
     }
 
     if (key === "username") {
-      const username = toTrimmedString(value);
+      const username = toTrimmedString(value).toLowerCase();
 
       if (!username) {
         throw new Error("username cannot be empty");
@@ -407,18 +407,25 @@ exports.getProfile = async (req, res) => {
 
 exports.getPublicProfile = async (req, res) => {
   try {
-    const username = toTrimmedString(req.params.username).toLowerCase();
+    const identifier = toTrimmedString(req.params.username);
 
-    if (!username) {
-      return res.status(400).json({ error: "username is required" });
+    if (!identifier) {
+      return res.status(400).json({ error: "username or id is required" });
     }
 
     const user = await prisma.user.findFirst({
       where: {
-        username: {
-          equals: username,
-          mode: "insensitive",
-        },
+        OR: [
+          {
+            username: {
+              equals: identifier,
+              mode: "insensitive",
+            },
+          },
+          {
+            id: identifier,
+          },
+        ],
       },
     });
 
@@ -429,6 +436,25 @@ exports.getPublicProfile = async (req, res) => {
     res.json(sanitizePublicUser(user));
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getDiscoverProfiles = async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        NOT: {
+          id: req.user.id,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return res.json(users.map(sanitizePublicUser));
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -466,6 +492,25 @@ exports.updateProfile = async (req, res) => {
 
     const mergedUser = { ...existingUser, ...safeData };
     const profileCompletePercentage = calculateProfileCompletePercentage(mergedUser);
+
+    if (safeData.username) {
+      const duplicateUsernameUser = await prisma.user.findFirst({
+        where: {
+          username: {
+            equals: safeData.username,
+            mode: "insensitive",
+          },
+          NOT: {
+            id: req.user.id,
+          },
+        },
+        select: { id: true },
+      });
+
+      if (duplicateUsernameUser) {
+        return res.status(400).json({ error: "Username already taken. Try another username" });
+      }
+    }
 
     const user = await prisma.user.update({
       where: { id: req.user.id },

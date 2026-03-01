@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { mockUsers } from "../data/mockData";
 import { useUserStore } from "../store/useUserStore";
+import { getDiscoverProfiles } from "../services/userService";
 
 const MOCK_USERS = mockUsers.map((user) => ({
     uid: user.uid,
@@ -52,10 +53,11 @@ function calculateScore(currentUser, otherUser) {
 export function useMatchmakerController() {
     const { user } = useUserStore();
     const [lastAction, setLastAction] = useState(null);
+    const [dbProfiles, setDbProfiles] = useState([]);
+    const [useMockFallback, setUseMockFallback] = useState(false);
     const [decisionState, setDecisionState] = useState({
         key: null,
-        passed: [],
-        saved: [],
+        skipped: [],
         connected: [],
     });
 
@@ -74,18 +76,63 @@ export function useMatchmakerController() {
     );
 
     const decisionKey = currentUser.uid;
+
+    useEffect(() => {
+        let active = true;
+
+        const loadProfiles = async () => {
+            try {
+                const profiles = await getDiscoverProfiles();
+                if (!active) return;
+
+                const candidates = profiles
+                    .filter((item) => (item.uid || item.id) !== currentUser.uid)
+                    .map((item) => ({
+                        uid: item.uid || item.id,
+                        username: item.username,
+                        name: item.name || item.username || "Campus User",
+                        campus: item.campus || "",
+                        branch: item.branch || "",
+                        batch: item.batch || "",
+                        openToConnect: true,
+                        interests: Array.isArray(item.interests) ? item.interests : [],
+                        skills: Array.isArray(item.skills) ? item.skills : [],
+                        lookingFor: ["Collaboration", "Project Team"],
+                        profile_pic: item.profile_pic || item.profileImageUrl || "https://i.pravatar.cc/150?img=1",
+                        bio: item.bio || "",
+                        karmaCount: item.karmaCount || 0,
+                        postsCount: item.postsCount || 0,
+                        threadsCount: item.threadsCount || 0,
+                    }));
+
+                setDbProfiles(candidates);
+                setUseMockFallback(false);
+            } catch {
+                if (!active) return;
+                setUseMockFallback(true);
+            }
+        };
+
+        loadProfiles();
+
+        return () => {
+            active = false;
+        };
+    }, [currentUser.uid]);
+
     const scopedDecisionState = useMemo(
         () =>
             decisionState.key === decisionKey
                 ? decisionState
-                : { key: decisionKey, passed: [], saved: [], connected: [] },
+                : { key: decisionKey, skipped: [], connected: [] },
         [decisionState, decisionKey]
     );
 
     const rankedMatches = useMemo(() => {
         const maxScore = 5 * 5 + 4 * 5 + 4 * 3 + 3 + 3 + 2 + 1;
+        const sourceUsers = dbProfiles.length > 0 ? dbProfiles : (useMockFallback ? MOCK_USERS : []);
 
-        const filtered = MOCK_USERS
+        const filtered = sourceUsers
             .filter((candidate) => candidate.uid !== currentUser.uid)
             .map((candidate) => {
                 const { score, commonInterests, commonSkills, commonLookingFor } = calculateScore(currentUser, candidate);
@@ -106,22 +153,12 @@ export function useMatchmakerController() {
             })
             .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
 
-        if (filtered.length > 0) return filtered;
-
-        return MOCK_USERS.slice(0, 5).map((u) => ({
-            ...u,
-            compatibilityPercent: 45,
-            compatibilityScore: 10,
-            commonInterests: [],
-            commonSkills: [],
-            commonLookingFor: [],
-        }));
-    }, [currentUser]);
+        return filtered;
+    }, [currentUser, dbProfiles, useMockFallback]);
 
     const matches = useMemo(() => {
         const hidden = new Set([
-            ...scopedDecisionState.passed,
-            ...scopedDecisionState.saved,
+            ...scopedDecisionState.skipped,
             ...scopedDecisionState.connected,
         ]);
         return rankedMatches.filter((candidate) => !hidden.has(candidate.uid));
@@ -135,33 +172,31 @@ export function useMatchmakerController() {
 
         setLastAction(action);
 
-        if (action === "pass" || action === "save" || action === "connect") {
+        if (action === "skip" || action === "connect") {
             setDecisionState((prev) => {
                 const base =
                     prev.key === decisionKey
                         ? prev
-                        : { key: decisionKey, passed: [], saved: [], connected: [] };
+                        : { key: decisionKey, skipped: [], connected: [] };
                 const next = {
                     key: decisionKey,
-                    passed: base.passed.filter((uid) => uid !== targetUid),
-                    saved: base.saved.filter((uid) => uid !== targetUid),
+                    skipped: base.skipped.filter((uid) => uid !== targetUid),
                     connected: base.connected.filter((uid) => uid !== targetUid),
                 };
-                if (action === "pass") next.passed.push(targetUid);
-                if (action === "save") next.saved.push(targetUid);
+                if (action === "skip") next.skipped.push(targetUid);
                 if (action === "connect") next.connected.push(targetUid);
                 return next;
             });
         }
     };
 
-    const handleSwipe = (direction) => {
+    const handleSwipe = (direction, candidateUid) => {
         if (direction === "right") {
-            applyAction("connect");
+            applyAction("connect", candidateUid);
             return;
         }
         if (direction === "left") {
-            applyAction("pass");
+            applyAction("skip", candidateUid);
         }
     };
 
@@ -170,9 +205,8 @@ export function useMatchmakerController() {
         matches,
         lastAction,
         decisionState: scopedDecisionState,
-        handlePass: () => applyAction("pass"),
-        handleSave: () => applyAction("save"),
-        handleConnect: () => applyAction("connect"),
+        handleSkip: (candidateUid) => applyAction("skip", candidateUid),
+        handleConnect: (candidateUid) => applyAction("connect", candidateUid),
         handleSwipe,
     };
 }

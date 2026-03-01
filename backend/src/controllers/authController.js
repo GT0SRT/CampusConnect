@@ -30,22 +30,25 @@ const mapAuthUser = (user) => ({
 
 const register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, confirmPassword } = req.body;
 
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !confirmPassword) {
       return res
         .status(400)
-        .json({ error: "username, email and password are required" });
+        .json({ error: "all fields are required" });
+    }
+
+    if (String(password) !== String(confirmPassword)) {
+      return res.status(400).json({ error: "password do not match" });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedUsername = username.trim();
+    const normalizedUsername = username.trim().toLowerCase();
 
     if (!normalizedUsername) {
       return res.status(400).json({ error: "username is required" });
     }
 
-    // Check if user already exists
     const userExists = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
@@ -56,8 +59,13 @@ const register = async (req, res) => {
         .json({ error: "User already exists with this email" });
     }
 
-    const usernameExists = await prisma.user.findUnique({
-      where: { username: normalizedUsername },
+    const usernameExists = await prisma.user.findFirst({
+      where: {
+        username: {
+          equals: normalizedUsername,
+          mode: "insensitive",
+        },
+      },
     });
 
     if (usernameExists) {
@@ -135,26 +143,34 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { identifier, email, username, password } = req.body;
+    const loginIdentifier = String(identifier || email || username || "").trim();
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "email and password are required" });
+    if (!loginIdentifier || !password) {
+      return res.status(400).json({ error: "email/username and password are required" });
     }
 
-    // Check if user email exists in the table
-    const user = await prisma.user.findUnique({
-      where: { email: email.trim().toLowerCase() },
+    const normalizedIdentifier = loginIdentifier.toLowerCase();
+
+    // Check if user exists by email or username
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: normalizedIdentifier },
+          { username: { equals: loginIdentifier, mode: "insensitive" } },
+        ],
+      },
     });
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Invalid username/email or password" });
     }
 
     // verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Invalid username/email or password" });
     }
 
     const token = generateToken(user.id);
