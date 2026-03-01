@@ -34,6 +34,8 @@ export default function Sidebar({ onItemClick, onClose }) {
   const clearUser = useUserStore((state) => state.clearUser);
   const { pathname } = useLocation();
   const isAiActive = pathname.toLowerCase().startsWith("/interview");
+  const isAssessmentActive = pathname.toLowerCase().startsWith("/ai-assessment");
+  const [isAssessmentMenuOpen, setIsAssessmentMenuOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const timerRef = useRef(null);
@@ -82,7 +84,28 @@ export default function Sidebar({ onItemClick, onClose }) {
       <Item to="/threads" label="Threads" Icon={ScrollText} theme={theme} onItemClick={onItemClick} />
       <Item to="/matchmaker" label="AI Matchmaker" Icon={Bot} theme={theme} onItemClick={onItemClick} />
       <Item to="/squad" label="Squad" Icon={UsersRound} theme={theme} onItemClick={onItemClick} />
-      <Item to="/AI-assessment" label="AI Assessment" Icon={Code} theme={theme} onItemClick={onItemClick} />
+
+      <div>
+        <div className={getLinkStyles(isAssessmentActive, theme)}>
+          <NavLink to="/AI-assessment" onClick={onItemClick} className="flex flex-1 items-center gap-3">
+            <Code className="w-5 h-5" />
+            <span>AI Assessment</span>
+          </NavLink>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              setIsAssessmentMenuOpen((prev) => !prev);
+            }}
+            className={`ml-2 rounded-md p-1 transition ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-gray-200'}`}
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${isAssessmentMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+        <div className={`ml-8 mt-1 space-y-1 overflow-hidden origin-top transition-all duration-300 ease-out ${isAssessmentMenuOpen ? 'max-h-40 scale-y-100 opacity-100' : 'max-h-0 scale-y-95 opacity-0'}`}>
+          <Item to="/AI-assessment" label="Quick Assessment" theme={theme} onItemClick={onItemClick} end />
+          <Item to="/AI-assessment/history" label="Assessment History" theme={theme} onItemClick={onItemClick} />
+        </div>
+      </div>
 
       <div >
         <div className={getLinkStyles(isAiActive, theme)}>

@@ -10,7 +10,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from gemini_client import process_image_with_gemini, generate_interview_prompt_with_gemini
 from interviewer import run_interview_chat
-from groq_client import chatbot
+from groq_client import chatbot, filter_fields_generator
 from interview_analyzer import analyze_interview_with_gemini
 from typing import List, Optional
 from gemini_resume import process_resume_analysis
@@ -118,6 +118,10 @@ class ChatBotRequest(BaseModel):
     message: str
 
 
+class MatchmakerFilterRequest(BaseModel):
+    prompt: str
+
+
 class InterviewerRequest(BaseModel):
     message: str
     history: List[ChatMessage] = Field(default_factory=list)
@@ -188,6 +192,24 @@ async def chatbot_endpoint(request: ChatBotRequest):
         raise
     except Exception as e:
         logger.exception("/chat failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.post("/matchmaker-filters")
+async def matchmaker_filters_endpoint(request: MatchmakerFilterRequest):
+    try:
+        if not request.prompt or not request.prompt.strip():
+            raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+
+        filters = filter_fields_generator(request.prompt)
+        return {
+            "status": "success",
+            "filters": filters,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("/matchmaker-filters failed: %s", e)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/interviewer")

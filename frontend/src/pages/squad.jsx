@@ -13,116 +13,11 @@ import {
 } from "lucide-react";
 import { useUserStore } from "../store/useUserStore";
 import { useNavigate } from "react-router-dom";
+import { getSquadState, saveSquadState } from "../services/squadService";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
-const initialSquads = [
-    {
-        id: "hackathon-crew",
-        name: "Hackathon Crew",
-        icon: Star,
-        color: "text-accent",
-        bgColor: "bg-cyan-500",
-        members: [
-            {
-                id: "1",
-                name: "Priya Sharma",
-                avatar: "https://i.pravatar.cc/150?img=47",
-                initials: "PS",
-                role: "Full-Stack Dev",
-                college: "IIT Delhi",
-                connectedVia: "Hackathon Interest",
-                status: "online",
-            },
-            {
-                id: "5",
-                name: "Ananya Reddy",
-                avatar: "https://i.pravatar.cc/150?img=44",
-                initials: "AR",
-                role: "Backend Dev",
-                college: "IIT Delhi",
-                connectedVia: "Project Recruit",
-                status: "online",
-            },
-            {
-                id: "6",
-                name: "Karan Mehta",
-                avatar: "https://i.pravatar.cc/150?img=61",
-                initials: "KM",
-                role: "DevOps Engineer",
-                college: "IIT Delhi",
-                connectedVia: "Hackathon Interest",
-                status: "busy",
-            },
-        ],
-    },
-    {
-        id: "design-squad",
-        name: "Design Squad",
-        icon: FolderOpen,
-        color: "text-primary",
-        bgColor: "bg-cyan-500",
-        members: [
-            {
-                id: "2",
-                name: "Meera Krishnan",
-                avatar: "https://i.pravatar.cc/150?img=45",
-                initials: "MK",
-                role: "UI/UX Designer",
-                college: "NIFT Mumbai",
-                connectedVia: "Mentorship",
-                status: "offline",
-            },
-            {
-                id: "7",
-                name: "Diya Nair",
-                avatar: "https://i.pravatar.cc/150?img=43",
-                initials: "DN",
-                role: "Graphic Designer",
-                college: "NIFT Mumbai",
-                connectedVia: "Collaboration",
-                status: "online",
-            },
-        ],
-    },
-    {
-        id: "startup-founders",
-        name: "Startup Founders",
-        icon: Users,
-        color: "text-chart-3",
-        bgColor: "bg-cyan-500",
-        members: [
-            {
-                id: "3",
-                name: "Rohan Gupta",
-                avatar: "https://i.pravatar.cc/150?img=59",
-                initials: "RG",
-                role: "Mobile Dev",
-                college: "BITS Pilani",
-                connectedVia: "Project Recruit",
-                status: "offline",
-            },
-            {
-                id: "4",
-                name: "Arjun Patel",
-                avatar: "https://i.pravatar.cc/150?img=53",
-                initials: "AP",
-                role: "ML Engineer",
-                college: "NIT Trichy",
-                connectedVia: "Co-founder Search",
-                status: "busy",
-            },
-        ],
-    },
-    {
-        id: "mentors",
-        name: "Mentors",
-        icon: Star,
-        color: "text-chart-4",
-        bgColor: "bg-cyan-500",
-        members: [],
-    },
-];
+const initialSquads = [];
 
 function StatusDot({ status }) {
     return (
@@ -188,7 +83,7 @@ export default function Squad() {
     const user = useUserStore((state) => state.user);
     const isDark = theme === "dark";
     const [squadsData, setSquadsData] = useState(initialSquads);
-    const [expandedSquads, setExpandedSquads] = useState(["hackathon-crew"]);
+    const [expandedSquads, setExpandedSquads] = useState([]);
     const [isCreateSquadModalOpen, setIsCreateSquadModalOpen] = useState(false);
     const [newSquadName, setNewSquadName] = useState("");
     const [chatTarget, setChatTarget] = useState(null);
@@ -204,6 +99,7 @@ export default function Squad() {
     });
     const storageUserKey = user?.uid || user?.id || "demo-user";
     const squadStorageKey = useMemo(() => `campusconnect:squads:${storageUserKey}`, [storageUserKey]);
+    const squadChatStorageKey = useMemo(() => `campusconnect:squad-chats:${storageUserKey}`, [storageUserKey]);
 
     const normalizeSquads = (rawSquads) => {
         if (!Array.isArray(rawSquads)) {
@@ -240,26 +136,106 @@ export default function Squad() {
         }));
     };
 
-    useEffect(() => {
-        try {
-            const raw = localStorage.getItem(squadStorageKey);
-            if (!raw) {
-                return;
+    const normalizeChats = (rawChats) => {
+        if (!rawChats || typeof rawChats !== "object" || Array.isArray(rawChats)) {
+            return {};
+        }
+
+        const output = {};
+        for (const [memberId, messages] of Object.entries(rawChats)) {
+            if (!Array.isArray(messages)) {
+                continue;
             }
 
-            const parsed = JSON.parse(raw);
-            const normalized = normalizeSquads(parsed);
-            setSquadsData(normalized);
-            if (normalized.length > 0) {
-                setExpandedSquads((prev) => {
-                    const current = Array.isArray(prev) ? prev : [];
-                    if (current.length > 0) return current;
-                    return [normalized[0].id];
-                });
-            }
-        } catch {
+            output[String(memberId)] = messages
+                .map((msg) => {
+                    if (!msg || typeof msg !== "object") {
+                        return null;
+                    }
+
+                    const cleaned = String(msg.text || "").trim();
+                    if (!cleaned) {
+                        return null;
+                    }
+
+                    return {
+                        id: String(msg.id || `${memberId}-${Date.now()}`),
+                        text: cleaned,
+                        sender: String(msg.sender || "me"),
+                        time: String(msg.time || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })),
+                    };
+                })
+                .filter(Boolean);
         }
-    }, [squadStorageKey]);
+
+        return output;
+    };
+
+    useEffect(() => {
+        let active = true;
+
+        const loadState = async () => {
+            let localSquads = [];
+            let localChats = {};
+
+            try {
+                const rawSquads = localStorage.getItem(squadStorageKey);
+                const parsedSquads = rawSquads ? JSON.parse(rawSquads) : [];
+                localSquads = normalizeSquads(parsedSquads);
+            } catch {
+                localSquads = [];
+            }
+
+            try {
+                const rawChats = localStorage.getItem(squadChatStorageKey);
+                const parsedChats = rawChats ? JSON.parse(rawChats) : {};
+                localChats = normalizeChats(parsedChats);
+            } catch {
+                localChats = {};
+            }
+
+            if (!active) return;
+
+            setSquadsData(localSquads);
+            setChatByMemberId(localChats);
+            if (localSquads.length > 0) {
+                setExpandedSquads((prev) => (prev.length > 0 ? prev : [localSquads[0].id]));
+            }
+
+            try {
+                const remote = await getSquadState();
+                if (!active) return;
+
+                const remoteSquads = normalizeSquads(remote?.squads || []);
+                const remoteChats = normalizeChats(remote?.chatsByMemberId || {});
+                const hasRemoteData = remoteSquads.length > 0 || Object.keys(remoteChats).length > 0;
+
+                if (hasRemoteData) {
+                    setSquadsData(remoteSquads);
+                    setChatByMemberId(remoteChats);
+                    if (remoteSquads.length > 0) {
+                        setExpandedSquads((prev) => (prev.length > 0 ? prev : [remoteSquads[0].id]));
+                    }
+                    return;
+                }
+
+                const hasLocalData = localSquads.length > 0 || Object.keys(localChats).length > 0;
+                if (hasLocalData) {
+                    await saveSquadState({
+                        squads: localSquads,
+                        chatsByMemberId: localChats,
+                    });
+                }
+            } catch {
+            }
+        };
+
+        loadState();
+
+        return () => {
+            active = false;
+        };
+    }, [squadStorageKey, squadChatStorageKey]);
 
     useEffect(() => {
         try {
@@ -267,6 +243,25 @@ export default function Squad() {
         } catch {
         }
     }, [squadStorageKey, squadsData]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(squadChatStorageKey, JSON.stringify(chatByMemberId));
+        } catch {
+        }
+    }, [squadChatStorageKey, chatByMemberId]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            saveSquadState({
+                squads: squadsData,
+                chatsByMemberId: chatByMemberId,
+            }).catch(() => {
+            });
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [squadsData, chatByMemberId]);
 
     const toggleSquad = (id) => {
         setExpandedSquads((prev) =>

@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Brain, Zap, Clock, Hash, Building2, Briefcase, BookOpen } from "lucide-react";
+import { Clock, Hash, AlertCircle } from "lucide-react";
 import { useUserStore } from "../../store/useUserStore";
 
-const AssessmentSetup = ({ onStart, loading, historyLoading = false, latestAssessment = null }) => {
+const cn = (...classes) => classes.filter(Boolean).join(" ");
+
+const AssessmentSetup = ({ onStart, loading }) => {
   const theme = useUserStore((state) => state.theme);
+  const isDark = theme === "dark";
   const [form, setForm] = useState({
     company: "",
     role_name: "",
@@ -22,167 +25,158 @@ const AssessmentSetup = ({ onStart, loading, historyLoading = false, latestAsses
     onStart(form);
   };
 
-  return (
-    <div className={`min-h-screen flex items-center justify-center p-4 ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`}>
-      <div className={`w-full max-w-3xl mx-auto animate-fade-in-up ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`}>
+  const difficultyLevels = [
+    { id: "easy", label: "Easy" },
+    { id: "moderate", label: "Moderate" },
+    { id: "hard", label: "Hard" },
+  ];
 
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
-            <Brain className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">
-              AI Assessment
-            </span>
+  return (
+    <div className={cn("min-h-screen py-2 px-2 bg-transparent", isDark ? "text-slate-100" : "text-slate-900")}>
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h1 className={cn("text-3xl font-bold", isDark ? "text-white" : "text-slate-900")}>Assessment Practice</h1>
+            <p className={cn("mt-1 text-md", isDark ? "text-slate-400" : "text-slate-600")}>
+              Configure your setup and take an AI-powered assessment.
+            </p>
           </div>
-          <h1 className={`text-3xl font-bold mb-2 ${theme === "dark" ? "text-slate-100" : "text-slate-900"}`}>
-            <span className="gradient-text">Configure Your Assessment</span>
-          </h1>
-          <p className="text-muted-foreground">Set up parameters to generate AI-powered questions</p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="glass-card p-6 space-y-5 rounded-2xl">
-
-          {/* Company */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-primary" /> Company
-            </label>
-            <input
-              type="text"
-              required
-              value={form.company}
-              onChange={(e) => update("company", e.target.value)}
-              placeholder="e.g. Tech Company"
-              className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-            />
-          </div>
-
-          {/* Role */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-primary" /> Role Name
-            </label>
-            <input
-              type="text"
-              required
-              value={form.role_name}
-              onChange={(e) => update("role_name", e.target.value)}
-              placeholder="e.g. Software Engineer"
-              className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-            />
-          </div>
-
-          {/* Topics */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-primary" /> Topics
-            </label>
-            <input
-              type="text"
-              required
-              value={form.topics}
-              onChange={(e) => update("topics", e.target.value)}
-              placeholder="e.g. General, DSA, React"
-              className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-            />
-          </div>
-
-          {/* Difficulty */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Zap className="w-4 h-4 text-primary" /> Difficulty
-            </label>
-            <div className="flex gap-2">
-              {["easy", "moderate", "hard"].map((d) => (
-                <button
-                  type="button"
-                  key={d}
-                  onClick={() => update("difficulty", d)}
-                  style={form.difficulty === d ? { background: "linear-gradient(90deg, #00eaff, #00c3ff)" } : {}}
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium capitalize transition-all ${form.difficulty === d
-                    ? `${theme === "dark" ? "text-white" : "text-black"}`
-                    : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-                    }`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Questions & Time */}
-          <div className="grid grid-cols-2 gap-4">
-
-            {/* Number of questions */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Hash className="w-4 h-4 text-primary" /> Questions
+        <form
+          onSubmit={handleSubmit}
+          className={cn("rounded-2xl border p-7", isDark ? "border-slate-700 bg-slate-800" : "border-gray-200 bg-white")}
+        >
+          <div className="space-y-5">
+            <div>
+              <label className={cn("block text-sm font-medium mb-2", isDark ? "text-slate-300" : "text-slate-700")}>
+                Company <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                min={1}
-                max={20}
+                type="text"
                 required
-                value={form.noOfQuestions}
-                onChange={(e) =>
-                  update("noOfQuestions", parseInt(e.target.value) || 1)
-                }
-                className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                value={form.company}
+                onChange={(e) => update("company", e.target.value)}
+                placeholder="e.g. Google, Amazon, Microsoft"
+                className={cn(
+                  "w-full rounded-lg border px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-cyan-500",
+                  isDark ? "border-slate-600 bg-slate-700 text-white placeholder:text-slate-400" : "border-gray-300 bg-white"
+                )}
               />
             </div>
 
-            {/* Time */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary" /> Time (seconds)
+            <div>
+              <label className={cn("block text-sm font-medium mb-2", isDark ? "text-slate-300" : "text-slate-700")}>
+                Role Name <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                min={60}
+                type="text"
                 required
-                value={form.totalTime}
-                onChange={(e) =>
-                  update("totalTime", parseInt(e.target.value) || 60)
-                }
-                className="w-full px-4 py-3 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                value={form.role_name}
+                onChange={(e) => update("role_name", e.target.value)}
+                placeholder="e.g. Software Engineer, Product Manager"
+                className={cn(
+                  "w-full rounded-lg border px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-cyan-500",
+                  isDark ? "border-slate-600 bg-slate-700 text-white placeholder:text-slate-400" : "border-gray-300 bg-white"
+                )}
               />
+            </div>
+
+            <div>
+              <label className={cn("block text-sm font-medium mb-2", isDark ? "text-slate-300" : "text-slate-700")}>
+                Topics to Assess <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={form.topics}
+                onChange={(e) => update("topics", e.target.value)}
+                placeholder="e.g. DSA, System Design, React"
+                className={cn(
+                  "w-full rounded-lg border px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-cyan-500",
+                  isDark ? "border-slate-600 bg-slate-700 text-white placeholder:text-slate-400" : "border-gray-300 bg-white"
+                )}
+              />
+            </div>
+
+            <div>
+              <label className={cn("block text-sm font-medium mb-3", isDark ? "text-slate-300" : "text-slate-700")}>
+                Assessment Difficulty
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {difficultyLevels.map((level) => (
+                  <button
+                    type="button"
+                    key={level.id}
+                    onClick={() => update("difficulty", level.id)}
+                    className={cn(
+                      "rounded-md px-2 py-1 font-semibold text-white transition",
+                      form.difficulty === level.id ? "bg-cyan-500/40 ring-1 ring-cyan-500 ring-offset-2" : "bg-cyan-500/40 hover:bg-cyan-500/50 ring-1 ring-cyan-500",
+                      isDark ? "" : "ring-offset-gray-50"
+                    )}
+                  >
+                    <p className="text-sm">{level.label}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={cn("block text-sm font-medium mb-2", isDark ? "text-slate-300" : "text-slate-700")}>
+                  Questions
+                </label>
+                <div className={cn("flex items-center gap-2 rounded-lg border px-3 py-2.5", isDark ? "border-slate-600 bg-slate-700" : "border-gray-300 bg-white")}>
+                  <Hash className={cn("h-4 w-4", isDark ? "text-slate-400" : "text-gray-500")} />
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    required
+                    value={form.noOfQuestions}
+                    onChange={(e) => update("noOfQuestions", parseInt(e.target.value, 10) || 1)}
+                    className={cn("w-full bg-transparent text-sm outline-none", isDark ? "text-white" : "text-slate-900")}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={cn("block text-sm font-medium mb-2", isDark ? "text-slate-300" : "text-slate-700")}>
+                  Time (seconds)
+                </label>
+                <div className={cn("flex items-center gap-2 rounded-lg border px-3 py-2.5", isDark ? "border-slate-600 bg-slate-700" : "border-gray-300 bg-white")}>
+                  <Clock className={cn("h-4 w-4", isDark ? "text-slate-400" : "text-gray-500")} />
+                  <input
+                    type="number"
+                    min={60}
+                    required
+                    value={form.totalTime}
+                    onChange={(e) => update("totalTime", parseInt(e.target.value, 10) || 60)}
+                    className={cn("w-full bg-transparent text-sm outline-none", isDark ? "text-white" : "text-slate-900")}
+                  />
+                </div>
+              </div>
             </div>
 
           </div>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-3.5 rounded-lg font-semibold transition-all disabled:opacity-50 ${theme === "dark" ? "text-white" : "text-black"}`}
-            style={{ background: "linear-gradient(90deg, #00eaff, #00c3ff)" }}
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className={`w-4 h-4 border-2 rounded-full animate-spin ${theme === "dark" ? "border-white/40 border-t-white" : "border-black/40 border-t-black"}`} />
-                Generating...
-              </span>
-            ) : (
-              "Generate Assessment"
-            )}
-          </button>
-
-          {(historyLoading || latestAssessment) && (
-            <div className="rounded-lg border border-border bg-secondary/40 p-3 text-sm">
-              {historyLoading ? (
-                <p className="text-muted-foreground">Loading your latest assessment...</p>
-              ) : (
-                <p className="text-muted-foreground">
-                  Last: <span className="text-foreground font-medium">{latestAssessment?.company}</span>
-                  {" • "}
-                  <span className="text-foreground font-medium">{latestAssessment?.role_name}</span>
-                  {" • Score: "}
-                  <span className="text-foreground font-medium">{latestAssessment?.overallScore}</span>
-                </p>
+          <div className="mt-8 space-y-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className={cn(
+                "w-full rounded-lg px-4 py-3 font-semibold text-white transition",
+                loading ? "bg-cyan-500/70 cursor-not-allowed" : "bg-cyan-600 hover:bg-cyan-700"
               )}
-            </div>
-          )}
+            >
+              {loading ? "Generating Assessment..." : "Start Assessment"}
+            </button>
+
+            <p className={cn("text-xs flex items-center gap-2", isDark ? "text-slate-400" : "text-slate-500")}>
+              <AlertCircle className="h-3.5 w-3.5" />
+              Your timer starts as soon as questions are generated.
+            </p>
+          </div>
         </form>
       </div>
     </div>

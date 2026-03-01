@@ -7,6 +7,10 @@ import { uploadImageToCloudinary, validateImageFile } from '../../services/cloud
 
 const GeminiBot = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const isInCall = useUserStore((state) => state.isInCall);
+  const [assessmentPhase, setAssessmentPhase] = useState("setup");
+  const isAssessmentRoute = location.pathname.toLowerCase() === "/ai-assessment";
+  const isAssessmentFullscreen = isAssessmentRoute && assessmentPhase === "quiz";
   const theme = useUserStore((state) => state.theme);
   const [messages, setMessages] = useState([
     {
@@ -22,6 +26,24 @@ const GeminiBot = () => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+      const onPhaseChange = (event) => {
+        const nextPhase = event?.detail?.phase;
+        if (nextPhase) {
+          setAssessmentPhase(nextPhase);
+        }
+      };
+  
+      window.addEventListener("assessment-phase-change", onPhaseChange);
+      return () => window.removeEventListener("assessment-phase-change", onPhaseChange);
+    }, []);
+  
+    useEffect(() => {
+      if (!isAssessmentRoute) {
+        setAssessmentPhase("setup");
+      }
+    }, [isAssessmentRoute]);
 
   // Handle file selection
   const handleFileSelect = async (e) => {
@@ -161,7 +183,8 @@ const GeminiBot = () => {
         <div className={`fixed bottom-4 right-4 w-80 sm:w-90 h-[70vh] max-h-145 rounded-3xl shadow-2xl flex flex-col z-50 backdrop-blur-xl border transition-colors ${theme === 'dark'
           ? 'bg-slate-900/80 border-slate-700/50 text-white'
           : 'bg-white/80 border-gray-200/50 text-slate-900'
-          }`}>
+          }
+          ${isInCall || isAssessmentFullscreen ? 'border-cyan-500/50' : '' }`}>
           {/* Header */}
           <div className="bg-linear-to-r from-cyan-500 to-cyan-600 text-white p-4 rounded-t-3xl flex justify-between items-center shadow-lg shadow-cyan-500/20">
             <div className="flex items-center gap-2">

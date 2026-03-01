@@ -50,6 +50,16 @@ const Auth = () => {
       return;
     }
 
+    if (isLogin) {
+      const normalizedIdentifier = String(identifier || '').trim();
+      const normalizedPassword = String(password || '');
+
+      if (!normalizedIdentifier || !normalizedPassword) {
+        setError('Email/username and password are required.');
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     try {
@@ -57,8 +67,8 @@ const Auth = () => {
         ? await login({ identifier, password })
         : await register({ username, email, password, confirmPassword });
 
-      const authUser = response?.data?.user;
-      const token = response?.data?.token;
+      const authUser = response?.user || response?.data?.user;
+      const token = response?.token || response?.data?.token;
 
       if (token) {
         localStorage.setItem('auth-token', token);
@@ -198,43 +208,43 @@ const Auth = () => {
                 </div>
 
                 {!isForgotPassword && (
-                <div>
-                  <label className="block text-sm font-semibold text-slate-50 mb-2">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="w-full bg-slate-800 border-2 border-slate-700 text-slate-50 pl-12 pr-12 py-3 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-slate-700 transition-all placeholder-slate-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  {isLogin && (
-                    <div className="mr-0 mt-2 flex justify-end">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-50 mb-2">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="w-full bg-slate-800 border-2 border-slate-700 text-slate-50 pl-12 pr-12 py-3 rounded-xl focus:outline-none focus:border-cyan-500 focus:bg-slate-700 transition-all placeholder-slate-500"
+                      />
                       <button
                         type="button"
-                        onClick={() => {
-                          setIsForgotPassword(true);
-                          setError('');
-                          setMessage('');
-                        }}
-                        className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
-                        Forgot password?
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
-                  )}
-                </div>
+                    {isLogin && (
+                      <div className="mr-0 mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsForgotPassword(true);
+                            setError('');
+                            setMessage('');
+                          }}
+                          className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {!isForgotPassword && !isLogin && (
@@ -283,26 +293,26 @@ const Auth = () => {
             </form>
 
             {!isForgotPassword && (
-            <div className="mt-6">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-700"></div>
+              <div className="mt-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-700"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-slate-900/40 text-slate-400 font-medium">Or continue with</span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-slate-900/40 text-slate-400 font-medium">Or continue with</span>
-                </div>
-              </div>
 
-              <button
-                onClick={handleGoogleLogin}
-                type="button"
-                disabled={isLoading}
-                className="mt-6 w-full bg-slate-800 border-2 border-slate-700 hover:border-slate-600 hover:bg-slate-700 text-slate-50 font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google logo" width="20" height="20" />
-                Continue with Google
-              </button>
-            </div>
+                <button
+                  onClick={handleGoogleLogin}
+                  type="button"
+                  disabled={isLoading}
+                  className="mt-6 w-full bg-slate-800 border-2 border-slate-700 hover:border-slate-600 hover:bg-slate-700 text-slate-50 font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google logo" width="20" height="20" />
+                  Continue with Google
+                </button>
+              </div>
             )}
 
             <p className="text-center mt-6 text-sm text-slate-400">

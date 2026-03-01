@@ -2,12 +2,20 @@ import api from "./api";
 
 // LOGIN
 export async function login({ identifier, password }) {
-  const response = await api.post("/auth/login", {
-    identifier,
+  const normalizedIdentifier = String(identifier || "").trim();
+  const payload = {
+    identifier: normalizedIdentifier,
     password,
-  });
+  };
 
-  return response.data;
+  if (normalizedIdentifier.includes("@")) {
+    payload.email = normalizedIdentifier;
+  } else {
+    payload.username = normalizedIdentifier;
+  }
+
+  const response = await api.post("/auth/login", payload);
+  return response.data?.data || response.data;
 }
 
 // REGISTER
@@ -18,7 +26,7 @@ export async function register({ username, email, password, confirmPassword }) {
     password,
     confirmPassword,
   });
-  return response.data;
+  return response.data?.data || response.data;
 }
 
 // LOGOUT

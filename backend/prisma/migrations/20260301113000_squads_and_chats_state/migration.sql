@@ -1,0 +1,3 @@
+ALTER TABLE "User"
+ADD COLUMN IF NOT EXISTS "squadFolders" JSONB DEFAULT '[]'::jsonb,
+ADD COLUMN IF NOT EXISTS "squadChats" JSONB DEFAULT '{}'::jsonb;

@@ -60,7 +60,7 @@ function MainLayout() {
   return (
     <div className={isDark ? 'dark' : ''}>
       <div className="h-screen flex flex-col site-ambient">
-        <div className={isInCall ? 'hidden' : ''}>
+        <div className={isInCall || isAssessmentFullscreen ? 'hidden' : ''}>
           <Navbar />
         </div>
 

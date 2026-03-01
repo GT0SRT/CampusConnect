@@ -12,6 +12,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const Matchmaker = lazy(() => import("./pages/Matchmaker"));
 const ThreadView = lazy(() => import("./pages/ThreadView"));
 const AIAssessment = lazy(() => import("./pages/AIAssessment"));
+const AssessmentHistory = lazy(() => import("./pages/AssessmentHistory"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Squad = lazy(() => import("./pages/squad"));
 const InterviewSetup = lazy(() => import("./components/interview/InterviewSetup"));
@@ -72,6 +73,7 @@ function App() {
         <Route path="/matchmaker" element={<Suspense fallback={<PageLoader />}><Matchmaker /></Suspense>} />
         <Route path="/squad" element={<Suspense fallback={<PageLoader />}><Squad /></Suspense>} />
         <Route path="/AI-assessment" element={<Suspense fallback={<PageLoader />}><AIAssessment /></Suspense>} />
+        <Route path="/AI-assessment/history" element={<Suspense fallback={<PageLoader />}><AssessmentHistory /></Suspense>} />
         <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
 
         <Route path="/interview" element={<Suspense fallback={<PageLoader />}><Outlet /></Suspense>}>

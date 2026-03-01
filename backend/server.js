@@ -53,6 +53,7 @@ const profileRoutes = require('./src/routes/profileRoutes');
 const threadRoutes = require('./src/routes/threadRoutes');
 const interviewRoutes = require('./src/routes/interviewRoutes');
 const assessmentsRoutes = require("./src/routes/assesmentsRoutes");
+const squadRoutes = require("./src/routes/squadRoutes");
 const { notFound, errorHandler } = require("./src/middleware/errorMiddleware");
 
 // Use Routes
@@ -62,6 +63,7 @@ app.use('/api/assessments', assessmentsRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/threads', threadRoutes);
 app.use('/api/interviews', interviewRoutes);
+app.use('/api/squads', squadRoutes);
 app.use("/api/thread", threadRoutes);
 app.use("/api/comments", commentRoutes);
 

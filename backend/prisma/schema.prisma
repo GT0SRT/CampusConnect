@@ -24,6 +24,8 @@ model User {
   tags                      String[] @default([])
   skills                    String[] @default([])
   interests                 String[] @default([])
+  squadFolders              Json?    @default("[]")
+  squadChats                Json?    @default("{}")
   socialLinks               Json?    @default("{}")
   education                 Json?    @default("[]")
   experience                Json?    @default("[]")

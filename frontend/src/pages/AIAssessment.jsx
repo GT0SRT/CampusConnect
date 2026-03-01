@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 import AssessmentSetup from "@/components/assessment/AssessmentSetup";
 import AssessmentQuiz from "@/components/assessment/AssessmentQuiz";
@@ -6,6 +7,7 @@ import AssessmentResults from "@/components/assessment/AssessmentResults";
 import { createAssessmentRecord, getAssessmentHistory } from "@/services/assessmentService";
 
 export default function AIAssessment() {
+  const location = useLocation();
   const [phase, setPhase] = useState("setup");
   const AI_API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
   const [loading, setLoading] = useState(false);
@@ -58,6 +60,15 @@ export default function AIAssessment() {
     };
   }, []);
 
+  useEffect(() => {
+    const selected = location?.state?.selectedAssessment;
+    if (!selected || typeof selected !== "object") return;
+
+    setAnalysis(selected);
+    setPhase("results");
+    setLoading(false);
+  }, [location?.state]);
+
   const normalizeQuestions = (items = []) =>
     items.map((item, index) => ({
       id: item.id ?? index + 1,
@@ -68,7 +79,34 @@ export default function AIAssessment() {
     }));
 
   const normalizeAnalysis = (result, fallback) => {
-    const detailed = result?.detailed_analysis || result?.questionsAnalysis || [];
+    const toDetailedArray = (value) => {
+      if (Array.isArray(value)) return value;
+
+      if (typeof value === "string") {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed)
+            ? parsed
+            : (parsed && typeof parsed === "object" ? Object.values(parsed) : []);
+        } catch {
+          return [];
+        }
+      }
+
+      if (value && typeof value === "object") {
+        return Object.values(value);
+      }
+
+      return [];
+    };
+
+    const detailedCandidates = [
+      toDetailedArray(result?.detailed_analysis),
+      toDetailedArray(result?.detailedAnalysis),
+      toDetailedArray(result?.questionsAnalysis),
+      toDetailedArray(result?.question_analysis),
+    ];
+    const detailed = detailedCandidates.find((entry) => Array.isArray(entry) && entry.length > 0) || [];
     const improvements = result?.improvements || [];
 
     return {
@@ -89,20 +127,43 @@ export default function AIAssessment() {
         ? improvements.join(" ")
         : (result?.weaknesses || ""),
       feedback: result?.feedback || "",
-      questionsAnalysis: detailed.map((item) => {
-        const candidateAnswer = item.candidate_answer ?? item.candidateAnswer ?? "";
-        const correctAnswer = item.correct_answer ?? item.correctAnswer ?? "";
+      questionsAnalysis: detailed.map((item, index) => {
+        const question =
+          item?.question ??
+          item?.question_text ??
+          item?.prompt ??
+          item?.query ??
+          `Question ${index + 1}`;
+
+        const candidateAnswer =
+          item?.candidate_answer ??
+          item?.candidateAnswer ??
+          item?.user_answer ??
+          item?.userAnswer ??
+          item?.selected_option ??
+          item?.selectedOption ??
+          "";
+
+        const correctAnswer =
+          item?.correct_answer ??
+          item?.correctAnswer ??
+          item?.expected_answer ??
+          item?.expectedAnswer ??
+          item?.correct_option ??
+          item?.correctOption ??
+          "";
+
         const explicitIsCorrect = item.is_correct ?? item.isCorrect;
         const inferredIsCorrect =
           String(candidateAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
 
         return {
-          question: item.question,
+          question,
           candidateAnswer,
           correctAnswer,
           isCorrect: typeof explicitIsCorrect === "boolean" ? explicitIsCorrect : inferredIsCorrect,
-          solution: item.solution,
-          topic: item.topic || "General",
+          solution: item?.solution ?? item?.explanation ?? item?.analysis ?? "",
+          topic: item?.topic || item?.category || "General",
         };
       }),
     };
@@ -145,6 +206,8 @@ export default function AIAssessment() {
   };
 
   const handleSubmit = async (answers) => {
+    setPhase("results");
+    setAnalysis(null);
     setLoading(true);
     try {
       if (!AI_API_BASE_URL) {
@@ -193,9 +256,9 @@ export default function AIAssessment() {
         console.error("Failed to persist assessment result:", persistErr);
       }
 
-      setPhase("results");
     } catch (err) {
       console.error("Failed to analyze assessment from ai-engine:", err);
+      setPhase("quiz");
       alert("Unable to analyze answers from ai-engine. Please try again.");
     } finally {
       setLoading(false);
@@ -232,5 +295,5 @@ export default function AIAssessment() {
     );
   }
 
-  return <AssessmentResults result={analysis} onRestart={handleRestart} />;
+  return <AssessmentResults result={analysis} loading={loading} onRestart={handleRestart} />;
 }
