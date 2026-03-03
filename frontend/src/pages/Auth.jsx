@@ -5,7 +5,8 @@ import { login, register } from '../services/authService';
 import { useEffect } from 'react';
 import { useUserStore } from './../store/useUserStore';
 import { GoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
+// import axios from 'axios';
+import api from '../services/api';
 
 const Auth = () => {
   const user = useUserStore((state) => state.user);
@@ -117,12 +118,18 @@ const Auth = () => {
     try {
       const googleToken = credentialResponse.credential;
       
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/auth/google`,
+      // const res = await axios.post(
+      //   `${import.meta.env.VITE_API_URL}/api/auth/google`,
+      //   { token: googleToken },
+      //   { 
+      //     withCredentials: true // SUPER IMPORTANT: Iske bina backend cookie set nahi kar payega!
+      //   }
+      // );
+
+      const res = await api.post(
+        '/auth/google',
         { token: googleToken },
-        { 
-          withCredentials: true // SUPER IMPORTANT: Iske bina backend cookie set nahi kar payega!
-        }
+        { withCredentials: true }
       );
 
       const authUser = res.data.data.user;
