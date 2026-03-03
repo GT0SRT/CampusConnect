@@ -118,7 +118,7 @@ const Auth = () => {
       const googleToken = credentialResponse.credential;
       
       const res = await axios.post(
-        "http://localhost:5000/api/auth/google",
+        `${import.meta.env.VITE_API_BASE_URL}/api/auth/google`,
         { token: googleToken },
         { 
           withCredentials: true // SUPER IMPORTANT: Iske bina backend cookie set nahi kar payega!
