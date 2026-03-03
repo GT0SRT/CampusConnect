@@ -536,7 +536,7 @@ export default function App() {
       {/* ====== FOOTER ====== */}
       <footer id="contact" className="border-t border-slate-800/50 px-6 pt-20 pb-12">
         <div className="mx-auto max-w-7xl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 p-7 md:p-24 mb-16">
             <div>
               <h2 className="text-3xl font-bold mb-4">Have a Question?</h2>
               <p className="text-slate-400">Drop us a message and we&apos;ll get back to you soon.</p>

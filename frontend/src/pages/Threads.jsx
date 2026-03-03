@@ -1,8 +1,10 @@
 import ThreadCard from "../components/threads/ThreadCard";
 import FeedTabs from "../components/feed/FeedTabs";
 import { useThreadsController } from "../hooks/useThreadsController";
+import { useSearchParams } from "react-router-dom";
 
 export default function Threads() {
+  const [searchParams] = useSearchParams();
   const {
     theme,
     threads,
@@ -18,6 +20,15 @@ export default function Threads() {
     reset,
     handleVote,
   } = useThreadsController();
+
+  const query = String(searchParams.get("q") || "").trim().toLowerCase();
+  const filteredThreads = !query
+    ? threads
+    : threads.filter((thread) => {
+      const title = String(thread?.title || "").toLowerCase();
+      const description = String(thread?.description || "").toLowerCase();
+      return title.includes(query) || description.includes(query);
+    });
 
   return (
     <div className="space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-40 transition-colors bg-transparent">
@@ -48,9 +59,9 @@ export default function Threads() {
         )}
 
         {/* Threads List */}
-        {!isLoading && threads.length > 0 ? (
+        {!isLoading && filteredThreads.length > 0 ? (
           <>
-            {threads.map((thread) => (
+            {filteredThreads.map((thread) => (
               <ThreadCard
                 key={thread.id}
                 thread={thread}
@@ -94,7 +105,7 @@ export default function Threads() {
               loading="lazy"
             /> */}
             <p className={`font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-gray-600'}`}>
-              No threads found
+              No threads found{query ? ` for "${query}"` : ""}
             </p>
             <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>
               Be the first to start a discussion

@@ -17,7 +17,8 @@ model User {
   id                        String   @id @default(uuid())
   username                  String   @unique
   email                     String   @unique
-  password                  String
+  password                  String?
+  authProvider              String   @default("LOCAL")
   fullName                  String?  @default("")
   profileImageUrl           String?  @default("")
   about                     String?  @default("")

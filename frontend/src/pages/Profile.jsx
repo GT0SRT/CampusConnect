@@ -8,6 +8,7 @@ import EditProfileModal from "../components/modals/EditProfileModal";
 import { useUserStore } from "../store/useUserStore";
 import { getPublicProfile, getUserProfile, syncEducationEntries, updateUserProfile } from "../services/userService";
 import { fetchProfileCollections, removeSavedPost, removeSavedThread } from "../services/profileService";
+import { generateConnectionMessage, sendConnectionRequest, startDirectMessage } from "../services/squadService";
 
 function toDisplayStringList(value) {
     if (Array.isArray(value)) {
@@ -85,6 +86,11 @@ export default function Profile() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState(null);
     const [publicUser, setPublicUser] = useState(null);
+    const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+    const [connectMessage, setConnectMessage] = useState("");
+    const [isGeneratingConnectMessage, setIsGeneratingConnectMessage] = useState(false);
+    const [isSendingConnectRequest, setIsSendingConnectRequest] = useState(false);
+    const [connectUiNotice, setConnectUiNotice] = useState(null);
     const [collections, setCollections] = useState({
         posts: [],
         threads: [],
@@ -285,6 +291,108 @@ export default function Profile() {
         }
     };
 
+    const handleMessageClick = async () => {
+        const targetId = viewedUser?.uid || viewedUser?.id;
+        if (!targetId || isMe) {
+            return;
+        }
+
+        try {
+            const result = await startDirectMessage(targetId);
+            const chatTarget = result?.chatTarget || {
+                id: targetId,
+                uid: targetId,
+                username: viewedUser?.username || "",
+                name: viewedUser?.name || viewedUser?.username || "Campus User",
+                avatar: viewedUser?.profileImageUrl || viewedUser?.profile_pic || "",
+            };
+
+            navigate("/squad", {
+                state: {
+                    openChatTarget: chatTarget,
+                },
+            });
+        } catch (messageError) {
+            setError(messageError);
+        }
+    };
+
+    const handleConnectClick = async () => {
+        const targetId = viewedUser?.uid || viewedUser?.id;
+        if (!targetId || isMe) {
+            return;
+        }
+
+        setConnectUiNotice(null);
+        setIsConnectModalOpen(true);
+        setIsGeneratingConnectMessage(true);
+
+        try {
+            const aiText = await generateConnectionMessage({
+                myName: user?.name || user?.username,
+                theirName: viewedUser?.name || viewedUser?.username,
+                context: `${viewedUser?.branch || ""} ${viewedUser?.campus || ""}`.trim(),
+            });
+            setConnectMessage(String(aiText || "").trim());
+        } catch (connectError) {
+            setConnectMessage(
+                `Hey ${viewedUser?.name || viewedUser?.username || "there"}, your profile stood out. Want to connect and explore a collaboration opportunity together?`
+            );
+            setConnectUiNotice({
+                type: "error",
+                text: "Could not generate AI message, using a default draft.",
+            });
+            setError(connectError);
+        } finally {
+            setIsGeneratingConnectMessage(false);
+        }
+    };
+
+    const handleConnectSubmit = async () => {
+        const targetId = viewedUser?.uid || viewedUser?.id;
+        if (!targetId || isMe || isSendingConnectRequest) {
+            return;
+        }
+
+        const finalText = String(connectMessage || "").trim();
+        if (!finalText) {
+            setConnectUiNotice({
+                type: "error",
+                text: "Please enter a message before sending.",
+            });
+            return;
+        }
+
+        setIsSendingConnectRequest(true);
+
+        try {
+            await sendConnectionRequest({
+                targetUserId: targetId,
+                text: finalText,
+            });
+
+            setIsConnectModalOpen(false);
+            setConnectMessage("");
+            setConnectUiNotice({
+                type: "success",
+                text: "Connection request sent.",
+            });
+            await loadProfileData(true);
+        } catch (connectError) {
+            const message =
+                connectError?.response?.data?.error ||
+                connectError?.message ||
+                "Failed to send request.";
+            setConnectUiNotice({
+                type: "error",
+                text: message,
+            });
+            setError(connectError);
+        } finally {
+            setIsSendingConnectRequest(false);
+        }
+    };
+
     if (!dashboardProfile) {
         return (
             <div className="min-h-screen pb-20 flex items-center justify-center">
@@ -304,6 +412,23 @@ export default function Profile() {
 
     return (
         <div className="min-h-screen pb-20">
+            {connectUiNotice ? (
+                <div
+                    className={[
+                        "mx-auto mb-4 max-w-5xl rounded-xl border px-4 py-3 text-sm",
+                        connectUiNotice.type === "success"
+                            ? theme === "dark"
+                                ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-200"
+                                : "border-cyan-300 bg-cyan-50 text-cyan-800"
+                            : theme === "dark"
+                                ? "border-red-500/30 bg-red-500/10 text-red-200"
+                                : "border-red-300 bg-red-50 text-red-700",
+                    ].join(" ")}
+                >
+                    {connectUiNotice.text}
+                </div>
+            ) : null}
+
             <ProfileDashboard
                 isMe={isMe}
                 profile={dashboardProfile}
@@ -317,8 +442,8 @@ export default function Profile() {
                 error={error}
                 onRetry={() => loadProfileData(true)}
                 onEditProfile={() => setIsEditing(true)}
-                onConnect={() => console.log("Connect clicked")}
-                onMessage={() => console.log("Message clicked")}
+                onConnect={handleConnectClick}
+                onMessage={handleMessageClick}
                 onEducationSave={handleEducationSave}
                 onExperienceSave={onSectionSave("experience")}
                 onSkillsSave={onSectionSave("skills")}
@@ -371,6 +496,73 @@ export default function Profile() {
                         loadProfileData(true);
                     }}
                 />
+            ) : null}
+
+            {isConnectModalOpen ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div
+                        className={[
+                            "w-full max-w-lg rounded-2xl border p-5 backdrop-blur-xl",
+                            theme === "dark" ? "border-slate-700 bg-slate-900/95" : "border-gray-200 bg-white/95",
+                        ].join(" ")}
+                    >
+                        <h2 className={theme === "dark" ? "text-lg font-bold text-slate-100" : "text-lg font-bold text-neutral-900"}>
+                            Send Connection Request
+                        </h2>
+                        <p className={theme === "dark" ? "mt-1 text-sm text-slate-300" : "mt-1 text-sm text-neutral-600"}>
+                            Add a short message to connect with {viewedUser?.name || viewedUser?.username || "this user"}.
+                        </p>
+
+                        <div className="mt-4">
+                            <label className={theme === "dark" ? "mb-1 block text-xs font-medium text-slate-300" : "mb-1 block text-xs font-medium text-neutral-700"}>
+                                Message
+                            </label>
+                            <textarea
+                                value={connectMessage}
+                                onChange={(event) => setConnectMessage(event.target.value)}
+                                rows={4}
+                                placeholder={isGeneratingConnectMessage ? "Generating AI suggestion..." : "Write your connection message"}
+                                className={[
+                                    "w-full rounded-xl border px-3 py-2 text-sm outline-none",
+                                    theme === "dark"
+                                        ? "border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-400"
+                                        : "border-gray-300 bg-white text-neutral-900 placeholder:text-gray-400",
+                                ].join(" ")}
+                            />
+                        </div>
+
+                        <div className="mt-5 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsConnectModalOpen(false);
+                                    setConnectMessage("");
+                                }}
+                                className={[
+                                    "rounded-lg border px-3 py-2 text-sm font-semibold transition",
+                                    theme === "dark"
+                                        ? "border-slate-700 text-slate-200 hover:bg-slate-800"
+                                        : "border-gray-300 text-neutral-700 hover:bg-gray-100",
+                                ].join(" ")}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConnectSubmit}
+                                disabled={isGeneratingConnectMessage || isSendingConnectRequest}
+                                className={[
+                                    "rounded-lg px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
+                                    theme === "dark"
+                                        ? "border border-cyan-500/30 bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
+                                        : "bg-cyan-600 text-white hover:bg-cyan-700",
+                                ].join(" ")}
+                            >
+                                {isSendingConnectRequest ? "Sending..." : "Send Request"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             ) : null}
         </div>
     );

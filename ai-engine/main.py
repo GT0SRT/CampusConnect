@@ -368,6 +368,23 @@ async def assess_response(request: AssessResponseRequest):
         logger.exception("/assess_response failed: %s", e)
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@app.post("/matchmaker")
+async def matchmaker_filter(request: MatchmakerFilterRequest):
+    try:
+        if not request.prompt or not request.prompt.strip():
+            raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+
+        filters = filter_fields_generator(request.prompt)
+        return {
+            "status": "success",
+            "filters": filters,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("/matchmaker-filters failed: %s", e)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 if __name__ == "__main__":
     server_host = os.getenv("SERVER_HOST", "0.0.0.0")
     server_port = int(os.getenv("SERVER_PORT", 8000))

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import './index.css'
 import App from './App.jsx'
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,6 +18,8 @@ const queryClient = new QueryClient({
   },
 })
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
 try {
   const root = document.getElementById('root')
   if (!root) {
@@ -28,7 +31,9 @@ try {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
-            <App />
+            <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+              <App />
+            </GoogleOAuthProvider>
           </BrowserRouter>
         </QueryClientProvider>
       </ErrorBoundary>

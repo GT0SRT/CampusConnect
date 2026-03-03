@@ -1,12 +1,9 @@
 const prisma = require("../lib/prisma");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const { generateTokenAndSetCookie } = require("../utils/generateToken");
+const { OAuth2Client } = require("google-auth-library");
 
-const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: "7d",
-  });
-};
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const mapAuthUser = (user) => ({
   id: user.id,
@@ -33,9 +30,7 @@ const register = async (req, res) => {
     const { username, email, password, confirmPassword } = req.body;
 
     if (!username || !email || !password || !confirmPassword) {
-      return res
-        .status(400)
-        .json({ error: "all fields are required" });
+      return res.status(400).json({ error: "all fields are required" });
     }
 
     if (String(password) !== String(confirmPassword)) {
@@ -54,9 +49,7 @@ const register = async (req, res) => {
     });
 
     if (userExists) {
-      return res
-        .status(400)
-        .json({ error: "User already exists with this email" });
+      return res.status(400).json({ error: "User already exists with this email" });
     }
 
     const usernameExists = await prisma.user.findFirst({
@@ -69,21 +62,18 @@ const register = async (req, res) => {
     });
 
     if (usernameExists) {
-      return res
-        .status(400)
-        .json({ error: "Username already taken. Try another username" });
+      return res.status(400).json({ error: "Username already taken. Try another username" });
     }
 
-    // Hash Password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create User with default empty fields
     const user = await prisma.user.create({
       data: {
         username: normalizedUsername,
         email: normalizedEmail,
         password: hashedPassword,
+        authProvider: "LOCAL",
         fullName: "",
         profileImageUrl: "",
         about: "",
@@ -98,14 +88,13 @@ const register = async (req, res) => {
       },
     });
 
-    // Generate JWT
-    const token = generateToken(user.id);
+    const authToken = generateTokenAndSetCookie(user.id, res);
 
     res.status(201).json({
       status: "success",
       data: {
         user: mapAuthUser(user),
-        token,
+        token: authToken,
       },
     });
   } catch (error) {
@@ -113,30 +102,10 @@ const register = async (req, res) => {
       const conflictField = Array.isArray(error.meta?.target)
         ? error.meta.target[0]
         : error.meta?.target;
-
-      if (conflictField === "email") {
-        return res.status(400).json({ error: "User already exists with this email" });
-      }
-
-      if (conflictField === "username") {
-        return res.status(400).json({ error: "Username already taken. Try another username" });
-      }
-
+      if (conflictField === "email") return res.status(400).json({ error: "User already exists with this email" });
+      if (conflictField === "username") return res.status(400).json({ error: "Username already taken. Try another username" });
       return res.status(400).json({ error: "Duplicate user details found" });
     }
-
-    if (error.code === "P2022") {
-      return res.status(500).json({
-        error: "Database schema is out of sync. Run prisma migration and restart backend.",
-      });
-    }
-
-    if (error.name === "PrismaClientValidationError") {
-      return res.status(500).json({
-        error: "Invalid user payload for current database schema. Update controller fields to match Prisma model.",
-      });
-    }
-
     return res.status(500).json({ error: "Registration failed. Please try again." });
   }
 };
@@ -152,7 +121,6 @@ const login = async (req, res) => {
 
     const normalizedIdentifier = loginIdentifier.toLowerCase();
 
-    // Check if user exists by email or username
     const user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -166,14 +134,17 @@ const login = async (req, res) => {
       return res.status(401).json({ error: "Invalid username/email or password" });
     }
 
-    // verify password
+    if (!user.password) {
+      return res.status(401).json({ error: "Please login with Google" });
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid username/email or password" });
     }
 
-    const token = generateToken(user.id);
+    const token = generateTokenAndSetCookie(user.id, res);
 
     res.status(201).json({
       status: "success",
@@ -183,13 +154,69 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    if (error.code === "P2022") {
-      return res.status(500).json({
-        error: "Database schema is out of sync. Run prisma migration and restart backend.",
+    return res.status(500).json({ error: "Login failed. Please try again." });
+  }
+};
+
+const googleAuth = async (req, res) => {
+  try {
+    const { token: googleIdToken } = req.body;
+
+    if (!googleIdToken) {
+      return res.status(400).json({ error: "Google token is required" });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: googleIdToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+    const normalizedEmail = email.toLowerCase();
+
+    let user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      // Generate a unique username based on email
+      const baseUsername = normalizedEmail.split("@")[0].replace(/[^a-zA-Z0-9]/g, "");
+      const uniqueUsername = `${baseUsername}${Math.floor(1000 + Math.random() * 9000)}`;
+
+      user = await prisma.user.create({
+        data: {
+          username: uniqueUsername,
+          email: normalizedEmail,
+          fullName: name,
+          profileImageUrl: picture,
+          authProvider: "GOOGLE",
+          about: "",
+          tags: [],
+          skills: [],
+          interests: [],
+          socialLinks: {},
+          education: [],
+          experience: [],
+          projects: [],
+          profileCompletePercentage: 0,
+        },
       });
     }
 
-    return res.status(500).json({ error: "Login failed. Please try again." });
+    const authToken = generateTokenAndSetCookie(user.id, res);
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        user: mapAuthUser(user),
+        token: authToken,
+      },
+    });
+
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+    return res.status(500).json({ error: "Google authentication failed" });
   }
 };
 
@@ -204,4 +231,4 @@ const logout = async (req, res) => {
   });
 };
 
-module.exports = { register, login, logout };
+module.exports = { register, login, googleAuth, logout };

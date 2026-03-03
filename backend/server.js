@@ -54,6 +54,7 @@ const threadRoutes = require('./src/routes/threadRoutes');
 const interviewRoutes = require('./src/routes/interviewRoutes');
 const assessmentsRoutes = require("./src/routes/assesmentsRoutes");
 const squadRoutes = require("./src/routes/squadRoutes");
+const searchRoutes = require("./src/routes/searchRoutes");
 const { notFound, errorHandler } = require("./src/middleware/errorMiddleware");
 
 // Use Routes
@@ -64,6 +65,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/threads', threadRoutes);
 app.use('/api/interviews', interviewRoutes);
 app.use('/api/squads', squadRoutes);
+app.use('/api/search', searchRoutes);
 app.use("/api/thread", threadRoutes);
 app.use("/api/comments", commentRoutes);
 
@@ -90,3 +92,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+module.exports = app;

@@ -20,6 +20,25 @@ exports.addInterviewRecord = async (req, res) => {
             metadata,
         } = req.body;
 
+        const localInterviewId = String(metadata?.localInterviewId || "").trim();
+
+        if (localInterviewId) {
+            const existingInterview = await prisma.interview.findFirst({
+                where: {
+                    userId,
+                    metadata: {
+                        path: ["localInterviewId"],
+                        equals: localInterviewId,
+                    },
+                },
+                orderBy: { createdAt: "desc" },
+            });
+
+            if (existingInterview) {
+                return res.status(200).json(existingInterview);
+            }
+        }
+
         if (!metrics || typeof metrics !== "object") {
             return res.status(400).json({ error: "metrics is required" });
         }

@@ -20,34 +20,62 @@ const MOCK_USERS = mockUsers.map((user) => ({
     threadsCount: Math.floor(Math.random() * 20) + 2,
 }));
 
+const normalizeText = (value) => String(value || "").trim().toLowerCase();
+
+const normalizeArray = (value) => {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return [...new Set(value.map((item) => normalizeText(item)).filter(Boolean))];
+};
+
+const hasNormalizedValue = (value) => normalizeText(value).length > 0;
+
 function calculateScore(currentUser, otherUser) {
+    const currentInterests = normalizeArray(currentUser.interests);
+    const otherInterests = new Set(normalizeArray(otherUser.interests));
+    const commonInterests = currentInterests.filter((interest) => otherInterests.has(interest));
+
+    const currentSkills = normalizeArray(currentUser.skills);
+    const otherSkills = new Set(normalizeArray(otherUser.skills));
+    const commonSkills = currentSkills.filter((skill) => otherSkills.has(skill));
+
+    const currentLookingFor = normalizeArray(currentUser.lookingFor);
+    const otherLookingFor = new Set(normalizeArray(otherUser.lookingFor));
+    const commonLookingFor = currentLookingFor.filter((item) => otherLookingFor.has(item));
+
     let score = 0;
-
-    const commonInterests =
-        currentUser.interests?.filter((interest) =>
-            otherUser.interests?.includes(interest)
-        ) || [];
-
-    const commonSkills =
-        currentUser.skills?.filter((skill) =>
-            otherUser.skills?.includes(skill)
-        ) || [];
-
-    const commonLookingFor =
-        currentUser.lookingFor?.filter((item) =>
-            otherUser.lookingFor?.includes(item)
-        ) || [];
-
     score += commonInterests.length * 5;
     score += commonSkills.length * 4;
     score += commonLookingFor.length * 4;
 
-    if (currentUser.campus && currentUser.campus === otherUser.campus) score += 3;
-    if (currentUser.branch === otherUser.branch) score += 3;
-    if (currentUser.batch === otherUser.batch) score += 2;
+    const currentCampus = normalizeText(currentUser.campus);
+    const otherCampus = normalizeText(otherUser.campus);
+    const currentBranch = normalizeText(currentUser.branch);
+    const otherBranch = normalizeText(otherUser.branch);
+    const currentBatch = normalizeText(currentUser.batch);
+    const otherBatch = normalizeText(otherUser.batch);
+
+    if (currentCampus && currentCampus === otherCampus) score += 3;
+    if (currentBranch && currentBranch === otherBranch) score += 3;
+    if (currentBatch && currentBatch === otherBatch) score += 2;
     if (otherUser.openToConnect) score += 1;
 
-    return { score, commonInterests, commonSkills, commonLookingFor };
+    const maxScore =
+        Math.min(currentInterests.length, 5) * 5 +
+        Math.min(currentSkills.length, 5) * 4 +
+        Math.min(currentLookingFor.length, 3) * 4 +
+        (hasNormalizedValue(currentUser.campus) ? 3 : 0) +
+        (hasNormalizedValue(currentUser.branch) ? 3 : 0) +
+        (hasNormalizedValue(currentUser.batch) ? 2 : 0) +
+        1;
+
+    const compatibilityPercent = maxScore > 0
+        ? Math.max(Math.min(Math.round((score / maxScore) * 100), 100), 0)
+        : 0;
+
+    return { score, maxScore, compatibilityPercent, commonInterests, commonSkills, commonLookingFor };
 }
 
 export function useMatchmakerController() {
@@ -61,19 +89,33 @@ export function useMatchmakerController() {
         connected: [],
     });
 
-    const currentUser = useMemo(
-        () =>
-            user || {
-                uid: "demo-user",
-                interests: ["Web Development", "AI/ML", "Design", "Data Science"],
-                skills: ["React", "Node.js", "Python"],
-                lookingFor: ["Study Partner", "Collaboration", "Networking"],
-                campus: "MIT",
-                branch: "Computer Science",
-                batch: "2026",
-            },
-        [user]
-    );
+    const currentUser = useMemo(() => {
+        if (user) {
+            const education = Array.isArray(user.education) ? user.education : [];
+            const educationWithBranch = education.find((entry) => normalizeText(entry?.branch).length > 0);
+            const educationWithCampus = education.find((entry) => normalizeText(entry?.collegeName).length > 0);
+
+            return {
+                ...user,
+                interests: Array.isArray(user.interests) ? user.interests : [],
+                skills: Array.isArray(user.skills) ? user.skills : [],
+                lookingFor: Array.isArray(user.lookingFor) ? user.lookingFor : ["Collaboration", "Project Team"],
+                campus: user.campus || user.collegeName || educationWithCampus?.collegeName || "",
+                branch: user.branch || user.headline || educationWithBranch?.branch || "",
+                batch: user.batch || "",
+            };
+        }
+
+        return {
+            uid: "demo-user",
+            interests: ["Web Development", "AI/ML", "Design", "Data Science"],
+            skills: ["React", "Node.js", "Python"],
+            lookingFor: ["Study Partner", "Collaboration", "Networking"],
+            campus: "MIT",
+            branch: "Computer Science",
+            batch: "2026",
+        };
+    }, [user]);
 
     const decisionKey = currentUser.uid;
 
@@ -129,22 +171,17 @@ export function useMatchmakerController() {
     );
 
     const rankedMatches = useMemo(() => {
-        const maxScore = 5 * 5 + 4 * 5 + 4 * 3 + 3 + 3 + 2 + 1;
         const sourceUsers = dbProfiles.length > 0 ? dbProfiles : (useMockFallback ? MOCK_USERS : []);
 
         const filtered = sourceUsers
             .filter((candidate) => candidate.uid !== currentUser.uid)
             .map((candidate) => {
-                const { score, commonInterests, commonSkills, commonLookingFor } = calculateScore(currentUser, candidate);
-
-                const compatibilityPercent = Math.max(
-                    Math.min(Math.round((score / maxScore) * 100), 100),
-                    10  // Minimum 10% to always show something
-                );
+                const { score, maxScore, compatibilityPercent, commonInterests, commonSkills, commonLookingFor } = calculateScore(currentUser, candidate);
 
                 return {
                     ...candidate,
                     compatibilityScore: score,
+                    compatibilityMaxScore: maxScore,
                     compatibilityPercent,
                     commonInterests,
                     commonSkills,

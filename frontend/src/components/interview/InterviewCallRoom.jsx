@@ -10,20 +10,136 @@ import { useVoiceInterviewer } from "../../hooks/useVoiceInterviewer";
 import { getInterviewerReply } from "../../services/interviewerService";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
+const AI_TYPEWRITER_SPEED_MS = 220;
+const SILENCE_PROMPT_MIN_MS = 10000;
+const SILENCE_PROMPT_MAX_MS = 20000;
+const SILENCE_AUTO_END_MS = 60000;
+
+const SILENCE_DEFAULT_MESSAGES = [
+    "I’m still here. Share your thoughts whenever you're ready.",
+    "Take your time. You can answer when you’re comfortable.",
+    "No rush. I can continue once you start speaking.",
+    "Whenever you’re ready, please continue with your response.",
+];
+
+const getInterviewProgressStorageKey = (interviewId) => `active_interview_progress_${String(interviewId || "")}`;
+
+const TypewriterText = ({ text, speed = AI_TYPEWRITER_SPEED_MS }) => {
+    const [displayedText, setDisplayedText] = useState("");
+    const intervalRef = useRef(null);
+    const targetTextRef = useRef("");
+    const indexRef = useRef(0);
+
+    useEffect(() => {
+        const nextText = text || "";
+        const currentText = targetTextRef.current;
+
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+
+        if (!nextText) {
+            targetTextRef.current = "";
+            indexRef.current = 0;
+            setDisplayedText("");
+            return;
+        }
+
+        const isAppending = nextText.startsWith(currentText);
+        if (!isAppending) {
+            targetTextRef.current = nextText;
+            indexRef.current = 0;
+            setDisplayedText("");
+        } else {
+            targetTextRef.current = nextText;
+            indexRef.current = currentText.length;
+            setDisplayedText(currentText);
+        }
+
+        intervalRef.current = setInterval(() => {
+            const target = targetTextRef.current;
+            if (indexRef.current < target.length) {
+                const nextIndex = indexRef.current + 1;
+                indexRef.current = nextIndex;
+                setDisplayedText(target.slice(0, nextIndex));
+                return;
+            }
+
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }, speed);
+
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+        };
+    }, [text, speed]);
+
+    return <span>{displayedText}</span>;
+};
 
 export default function InterviewCallRoom({ onRouteStateChange }) {
     const { id } = useParams();
     const navigate = useNavigate();
     const activeSession = useInterviewStore((state) => state.activeSession);
+    const setActiveSession = useInterviewStore((state) => state.setActiveSession);
     const addToHistory = useInterviewStore((state) => state.addToHistory);
     const clearActiveSession = useInterviewStore((state) => state.clearActiveSession);
+    const interviewProgressStorageKey = getInterviewProgressStorageKey(id);
+
+    const [initialProgress] = useState(() => {
+        try {
+            const raw = localStorage.getItem(getInterviewProgressStorageKey(id));
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== "object") return null;
+            return parsed;
+        } catch {
+            return null;
+        }
+    });
     const isExitingRef = useRef(false);
+    const [hasCheckedStoredSession, setHasCheckedStoredSession] = useState(false);
 
     useEffect(() => {
-        if (!isExitingRef.current && (!activeSession || activeSession.id !== id)) {
-            navigate("/interview/join");
+        if (activeSession && String(activeSession.id) === String(id)) {
+            setHasCheckedStoredSession(true);
+            return;
         }
-    }, [activeSession, id, navigate]);
+
+        const restoreStoredSession = () => {
+            try {
+                const storedRaw = localStorage.getItem("active_session");
+                if (!storedRaw) return;
+
+                const storedSession = JSON.parse(storedRaw);
+                const matchesRoute = String(storedSession?.id) === String(id);
+                if (matchesRoute && storedSession?.config) {
+                    setActiveSession(storedSession);
+                }
+            } catch {
+                localStorage.removeItem("active_session");
+            }
+        };
+
+        if (!activeSession) {
+            restoreStoredSession();
+        }
+
+        setHasCheckedStoredSession(true);
+    }, [activeSession, id, setActiveSession]);
+
+    useEffect(() => {
+        if (!hasCheckedStoredSession) return;
+
+        const isValidSession = Boolean(activeSession) && String(activeSession?.id) === String(id);
+        if (!isExitingRef.current && !isValidSession) {
+            navigate("/interview/join", { replace: true });
+        }
+    }, [activeSession, hasCheckedStoredSession, id, navigate]);
 
     const theme = useUserStore((state) => state.theme);
     const isDark = theme === "dark";
@@ -35,14 +151,35 @@ export default function InterviewCallRoom({ onRouteStateChange }) {
     const [selectedVideoId, setSelectedVideoId] = useState('');
     const [elapsedTime, setElapsedTime] = useState(0);
     const [autoScrollCaptions, setAutoScrollCaptions] = useState(true);
-    const [endCallPromptCount, setEndCallPromptCount] = useState(0);
-    const [silenceAfterEndPromptCount, setSilenceAfterEndPromptCount] = useState(0);
-    const [endCallPrompted, setEndCallPrompted] = useState(false);
     const captionsScrollRef = useRef(null);
     const captionsRef = useRef([]);
     const initialGreetingSentRef = useRef(false);
-    const handleExitCallRef = useRef(null);
     const wakeLockRef = useRef(null);
+    const handleExitCallRef = useRef(null);
+    const silenceTrackerRef = useRef({
+        startedAt: 0,
+        promptCount: 0,
+        nextPromptAt: 0,
+    });
+
+    useEffect(() => {
+        const restoredTracker = initialProgress?.silenceTracker;
+        if (!restoredTracker || typeof restoredTracker !== "object") return;
+
+        silenceTrackerRef.current = {
+            startedAt: Number(restoredTracker.startedAt) || 0,
+            promptCount: Number(restoredTracker.promptCount) || 0,
+            nextPromptAt: Number(restoredTracker.nextPromptAt) || 0,
+        };
+    }, [initialProgress]);
+
+    const getRandomSilencePromptDelay = useCallback(() => {
+        return Math.floor(Math.random() * (SILENCE_PROMPT_MAX_MS - SILENCE_PROMPT_MIN_MS + 1)) + SILENCE_PROMPT_MIN_MS;
+    }, []);
+
+    const getDefaultSilenceMessage = useCallback((index) => {
+        return SILENCE_DEFAULT_MESSAGES[index % SILENCE_DEFAULT_MESSAGES.length];
+    }, []);
 
     const requestWakeLock = useCallback(async () => {
         if (!("wakeLock" in navigator)) return;
@@ -69,31 +206,45 @@ export default function InterviewCallRoom({ onRouteStateChange }) {
     const { captions, liveCaption, isSpeaking, respondWithAI, stopInterviewAudio } = useVoiceInterviewer({
         isMicOn,
         silenceMs: 6000,
-        onUserSilence: useCallback(async (userText, { respondWithAI, addCaption }) => {
+        maxUserResponseSec: null,
+        initialCaptions: initialProgress?.captions || [],
+        onUserSilence: useCallback(async (userText, { respondWithAI }) => {
             try {
-                // Check if user gave empty/very short response after end call prompt
-                const isEmptyResponse = !userText || userText.trim().length < 3;
-                if (endCallPrompted && isEmptyResponse) {
-                    const newSilenceCount = silenceAfterEndPromptCount + 1;
-                    setSilenceAfterEndPromptCount(newSilenceCount);
+                const normalizedUserText = userText?.trim();
+                if (!normalizedUserText) {
+                    const now = Date.now();
+                    const tracker = silenceTrackerRef.current;
 
-                    // Auto-disconnect after 3 consecutive silences
-                    if (newSilenceCount >= 3) {
-                        setTimeout(() => {
-                            handleExitCallRef.current?.();
-                        }, 2000);
+                    if (!tracker.startedAt) {
+                        tracker.startedAt = now;
+                        tracker.nextPromptAt = now + getRandomSilencePromptDelay();
                         return;
                     }
+
+                    if (now - tracker.startedAt >= SILENCE_AUTO_END_MS) {
+                        handleExitCallRef.current?.();
+                        return;
+                    }
+
+                    if (now >= tracker.nextPromptAt) {
+                        const defaultMessage = getDefaultSilenceMessage(tracker.promptCount);
+                        tracker.promptCount += 1;
+                        tracker.nextPromptAt = now + getRandomSilencePromptDelay();
+                        respondWithAI(defaultMessage);
+                    }
+
+                    return;
                 }
 
-                // Reset silence count if user actually responded
-                if (!isEmptyResponse && endCallPrompted) {
-                    setSilenceAfterEndPromptCount(0);
-                }
+                silenceTrackerRef.current = {
+                    startedAt: 0,
+                    promptCount: 0,
+                    nextPromptAt: 0,
+                };
 
                 const sessionConfig = activeSession?.config || {};
                 const replyData = await getInterviewerReply({
-                    message: userText,
+                    message: normalizedUserText,
                     history: captionsRef.current,
                     company: sessionConfig.company,
                     roleName: sessionConfig.role,
@@ -101,27 +252,49 @@ export default function InterviewCallRoom({ onRouteStateChange }) {
                     resumeSummary: sessionConfig.resumeOverview,
                     interviewDurationSec: elapsedTime,
                     difficulty: sessionConfig.difficulty,
-                    endCallPromptCount: endCallPromptCount,
+                    endCallPromptCount: 0,
                     interviewPrompt: sessionConfig.interviewPrompt || "",
                 });
 
                 if (replyData?.reply) {
                     respondWithAI(replyData.reply);
                 }
-
-                // Update end call prompt count and track if end was prompted
-                if (replyData?.endCallPromptCount !== undefined) {
-                    setEndCallPromptCount(replyData.endCallPromptCount);
-                }
-
-                if (replyData?.end_call_prompted) {
-                    setEndCallPrompted(true);
-                }
             } catch {
-                addCaption("AI", "I couldn't process that response, can you please rephrase?");
+                // Keep silent on network/processing failures to avoid unsolicited AI prompts.
             }
-        }, [activeSession, elapsedTime, endCallPromptCount, endCallPrompted, silenceAfterEndPromptCount]),
+        }, [activeSession, elapsedTime, getDefaultSilenceMessage, getRandomSilencePromptDelay]),
     });
+
+    useEffect(() => {
+        if (!activeSession || String(activeSession?.id) !== String(id)) return;
+
+        const payload = {
+            id,
+            captions,
+            silenceTracker: silenceTrackerRef.current,
+            updatedAt: Date.now(),
+        };
+
+        try {
+            localStorage.setItem(interviewProgressStorageKey, JSON.stringify(payload));
+        } catch {
+            // Ignore storage write failures
+        }
+    }, [activeSession, captions, id, interviewProgressStorageKey]);
+
+    useEffect(() => {
+        const isMatchingSession = Boolean(activeSession) && String(activeSession?.id) === String(id);
+        if (!isMatchingSession) return;
+        if (activeSession?.startedAt) return;
+
+        const updatedSession = {
+            ...activeSession,
+            startedAt: Date.now(),
+        };
+
+        setActiveSession(updatedSession);
+        localStorage.setItem("active_session", JSON.stringify(updatedSession));
+    }, [activeSession, id, setActiveSession]);
 
     const handleDeviceChange = useCallback(({ videoDeviceId }) => {
         setSelectedVideoId(videoDeviceId || "");
@@ -181,23 +354,33 @@ export default function InterviewCallRoom({ onRouteStateChange }) {
 
         addToHistory(completedInterview);
         clearActiveSession();
+        localStorage.removeItem("active_session");
+        localStorage.removeItem(interviewProgressStorageKey);
 
         navigate(`/interview/history/${interviewId}`, {
             replace: true,
         });
-    }, [activeSession, captions, elapsedTime, navigate, addToHistory, clearActiveSession, id, stopInterviewAudio, releaseWakeLock]);
+    }, [activeSession, captions, elapsedTime, navigate, addToHistory, clearActiveSession, id, interviewProgressStorageKey, stopInterviewAudio, releaseWakeLock]);
 
     useEffect(() => {
         handleExitCallRef.current = handleExitCall;
     }, [handleExitCall]);
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            setElapsedTime((previousTime) => previousTime + 1);
-        }, 1000);
+        const isMatchingSession = Boolean(activeSession) && String(activeSession?.id) === String(id);
+        if (!isMatchingSession) return;
+
+        const startMs = Number(activeSession?.startedAt) || Date.now();
+        const updateElapsedTime = () => {
+            const seconds = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+            setElapsedTime(seconds);
+        };
+
+        updateElapsedTime();
+        const timer = setInterval(updateElapsedTime, 1000);
 
         return () => clearInterval(timer);
-    }, []);
+    }, [activeSession, id]);
 
     useEffect(() => {
         onRouteStateChange?.(true);
@@ -264,10 +447,6 @@ export default function InterviewCallRoom({ onRouteStateChange }) {
                 if (replyData?.reply) {
                     respondWithAI(replyData.reply, { forceSpeak: true });
                 }
-
-                if (replyData?.endCallPromptCount !== undefined) {
-                    setEndCallPromptCount(replyData.endCallPromptCount);
-                }
             } catch {
                 initialGreetingSentRef.current = false;
             }
@@ -277,7 +456,7 @@ export default function InterviewCallRoom({ onRouteStateChange }) {
     }, [activeSession, captions.length, elapsedTime, respondWithAI]);
 
 
-    if (!activeSession || activeSession.id !== id || !activeSession.config) {
+    if (!activeSession || String(activeSession.id) !== String(id) || !activeSession.config) {
         return null;
     }
 
@@ -419,6 +598,24 @@ export default function InterviewCallRoom({ onRouteStateChange }) {
                                     isDark ? "bg-slate-800" : "bg-white"
                                 )}
                             >
+                                {captions.map((caption) => (
+                                    <div
+                                        key={caption.id}
+                                        className={cn(
+                                            "rounded-lg p-3 text-xs",
+                                            caption.speaker === "AI"
+                                                ? isDark ? "bg-cyan-500/20 border border-cyan-500/30" : "bg-cyan-50 border border-cyan-200"
+                                                : isDark ? "bg-slate-700" : "bg-gray-100"
+                                        )}
+                                    >
+                                        {caption.speaker === "AI" ? (
+                                            <TypewriterText text={caption.text} speed={AI_TYPEWRITER_SPEED_MS} />
+                                        ) : (
+                                            <p className={isDark ? "text-slate-300" : "text-gray-700"}>{caption.text}</p>
+                                        )}
+                                        {/* <p className={isDark ? "text-slate-300" : "text-gray-700"}>{caption.text}</p> */}
+                                    </div>
+                                ))}
                                 {liveCaption && (
                                     <div
                                         className={cn(
@@ -432,22 +629,6 @@ export default function InterviewCallRoom({ onRouteStateChange }) {
                                         <p className={isDark ? "text-slate-300" : "text-gray-700"}>{liveCaption}</p>
                                     </div>
                                 )}
-                                {captions.map((caption) => (
-                                    <div
-                                        key={caption.id}
-                                        className={cn(
-                                            "rounded-lg p-3 text-xs",
-                                            caption.speaker === "AI"
-                                                ? isDark ? "bg-cyan-500/20 border border-cyan-500/30" : "bg-cyan-50 border border-cyan-200"
-                                                : isDark ? "bg-slate-700" : "bg-gray-100"
-                                        )}
-                                    >
-                                        <p className={cn("font-semibold mb-1", caption.speaker === "AI" ? "text-cyan-400" : isDark ? "text-slate-300" : "text-gray-700")}>
-                                            {caption.speaker}
-                                        </p>
-                                        <p className={isDark ? "text-slate-300" : "text-gray-700"}>{caption.text}</p>
-                                    </div>
-                                ))}
                             </div>
                         </div>
                     )}

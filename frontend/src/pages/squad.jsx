@@ -7,78 +7,33 @@ import {
     ChevronRight,
     Plus,
     Users,
-    Star,
     Compass,
     MoreVertical,
 } from "lucide-react";
 import { useUserStore } from "../store/useUserStore";
-import { useNavigate } from "react-router-dom";
-import { getSquadState, saveSquadState } from "../services/squadService";
-
-const cn = (...classes) => classes.filter(Boolean).join(" ");
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+    getConnectionRequests,
+    getSquadState,
+    respondConnectionRequest,
+    saveSquadState,
+    sendDirectMessage,
+} from "../services/squadService";
+import { Avatar, UnreadDot } from "../components/squad/SquadShared";
+import {
+    cn,
+    DEFAULT_SQUAD_ID,
+    DEFAULT_SQUAD_NAME,
+    LEGACY_DEFAULT_SQUAD_ID,
+    resolveSquadIcon,
+    toUsername,
+} from "../utils/squadUtils";
 
 const initialSquads = [];
 
-function StatusDot({ status }) {
-    return (
-        <span
-            className={cn(
-                "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white",
-                status === "online" && "bg-green-500",
-                status === "busy" && "bg-amber-500",
-                status === "offline" && "bg-gray-300"
-            )}
-        />
-    );
-}
-
-function Avatar({ src, alt, initials, className = "" }) {
-    return (
-        <div className={cn("overflow-hidden rounded-full bg-cyan-150", className)}>
-            {src ? (
-                <img src={src} alt={alt} className="h-full w-full object-cover" />
-            ) : (
-                <span className="flex h-full w-full items-center justify-center text-xs font-bold text-cyan-750">
-                    {initials}
-                </span>
-            )}
-        </div>
-    );
-}
-
-function toUsername(name = "") {
-    return String(name || "")
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "")
-        .replace(/[^a-z0-9._]/g, "") || "campususer";
-}
-
-function resolveSquadIcon(squad) {
-    const normalizedId = String(squad?.id || "").toLowerCase();
-    const normalizedName = String(squad?.name || "").toLowerCase();
-
-    if (normalizedId === "hackathon-crew" || normalizedId === "mentors") {
-        return Star;
-    }
-
-    if (normalizedId === "startup-founders") {
-        return Users;
-    }
-
-    if (normalizedName.includes("hackathon") || normalizedName.includes("mentor")) {
-        return Star;
-    }
-
-    if (normalizedName.includes("founder") || normalizedName.includes("startup")) {
-        return Users;
-    }
-
-    return FolderOpen;
-}
-
 export default function Squad() {
     const navigate = useNavigate();
+    const location = useLocation();
     const theme = useUserStore((state) => state.theme);
     const user = useUserStore((state) => state.user);
     const isDark = theme === "dark";
@@ -89,6 +44,11 @@ export default function Squad() {
     const [chatTarget, setChatTarget] = useState(null);
     const [chatInput, setChatInput] = useState("");
     const [chatByMemberId, setChatByMemberId] = useState({});
+    const [readMessageCountByMemberId, setReadMessageCountByMemberId] = useState({});
+    const [connectionRequests, setConnectionRequests] = useState([]);
+    const [sentConnectionRequests, setSentConnectionRequests] = useState([]);
+    const [sentRequestsCount, setSentRequestsCount] = useState(0);
+    const [isRequestsLoading, setIsRequestsLoading] = useState(false);
     const [isChatMenuOpen, setIsChatMenuOpen] = useState(false);
     const [moveState, setMoveState] = useState({
         isOpen: false,
@@ -100,6 +60,7 @@ export default function Squad() {
     const storageUserKey = user?.uid || user?.id || "demo-user";
     const squadStorageKey = useMemo(() => `campusconnect:squads:${storageUserKey}`, [storageUserKey]);
     const squadChatStorageKey = useMemo(() => `campusconnect:squad-chats:${storageUserKey}`, [storageUserKey]);
+    const squadReadStorageKey = useMemo(() => `campusconnect:squad-read:${storageUserKey}`, [storageUserKey]);
 
     const normalizeSquads = (rawSquads) => {
         if (!Array.isArray(rawSquads)) {
@@ -107,8 +68,14 @@ export default function Squad() {
         }
 
         return rawSquads.map((squad) => ({
-            id: String(squad?.id || `squad-${Date.now()}`),
-            name: String(squad?.name || "New Squad"),
+            id:
+                String(squad?.id || `squad-${Date.now()}`) === LEGACY_DEFAULT_SQUAD_ID
+                    ? DEFAULT_SQUAD_ID
+                    : String(squad?.id || `squad-${Date.now()}`),
+            name:
+                String(squad?.id || "") === DEFAULT_SQUAD_ID || String(squad?.id || "") === LEGACY_DEFAULT_SQUAD_ID
+                    ? DEFAULT_SQUAD_NAME
+                    : String(squad?.name || "New Squad"),
             color: squad?.color || "text-primary",
             bgColor: squad?.bgColor || "bg-cyan-500",
             members: Array.isArray(squad?.members)
@@ -123,6 +90,7 @@ export default function Squad() {
 
                     return {
                         id: String(member?.id || member?.uid || `member-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`),
+                        username: String(member?.username || "").trim(),
                         name: memberName,
                         avatar: member?.avatar || member?.profile_pic || "",
                         initials: member?.initials || initials,
@@ -158,10 +126,24 @@ export default function Squad() {
                         return null;
                     }
 
+                    const senderId = String(msg.senderId || "").trim();
+                    const receiverId = String(msg.receiverId || "").trim();
+                    const createdAt = String(msg.createdAt || "").trim();
+                    const rawSender = String(msg.sender || "").trim().toLowerCase();
+                    const sender =
+                        rawSender === "me" || rawSender === "them"
+                            ? rawSender
+                            : senderId && senderId === storageUserKey
+                                ? "me"
+                                : "them";
+
                     return {
                         id: String(msg.id || `${memberId}-${Date.now()}`),
                         text: cleaned,
-                        sender: String(msg.sender || "me"),
+                        sender,
+                        senderId,
+                        receiverId,
+                        createdAt,
                         time: String(msg.time || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })),
                     };
                 })
@@ -177,6 +159,7 @@ export default function Squad() {
         const loadState = async () => {
             let localSquads = [];
             let localChats = {};
+            let localReadCounts = {};
 
             try {
                 const rawSquads = localStorage.getItem(squadStorageKey);
@@ -194,10 +177,31 @@ export default function Squad() {
                 localChats = {};
             }
 
+            try {
+                const rawReadCounts = localStorage.getItem(squadReadStorageKey);
+                const parsedReadCounts = rawReadCounts ? JSON.parse(rawReadCounts) : {};
+                localReadCounts = parsedReadCounts && typeof parsedReadCounts === "object" ? parsedReadCounts : {};
+            } catch {
+                localReadCounts = {};
+            }
+
             if (!active) return;
 
             setSquadsData(localSquads);
             setChatByMemberId(localChats);
+            setReadMessageCountByMemberId(() => {
+                const initial = {};
+                for (const [memberId, messages] of Object.entries(localChats)) {
+                    const savedCount = Number(localReadCounts?.[memberId]);
+                    const safeSavedCount = Number.isFinite(savedCount) && savedCount >= 0
+                        ? savedCount
+                        : Array.isArray(messages)
+                            ? messages.length
+                            : 0;
+                    initial[memberId] = safeSavedCount;
+                }
+                return initial;
+            });
             if (localSquads.length > 0) {
                 setExpandedSquads((prev) => (prev.length > 0 ? prev : [localSquads[0].id]));
             }
@@ -213,6 +217,18 @@ export default function Squad() {
                 if (hasRemoteData) {
                     setSquadsData(remoteSquads);
                     setChatByMemberId(remoteChats);
+                    setReadMessageCountByMemberId((prev) => {
+                        const next = {};
+                        for (const [memberId, messages] of Object.entries(remoteChats)) {
+                            const existingCount = Number(prev?.[memberId]);
+                            next[memberId] = Number.isFinite(existingCount) && existingCount >= 0
+                                ? existingCount
+                                : Array.isArray(messages)
+                                    ? messages.length
+                                    : 0;
+                        }
+                        return next;
+                    });
                     if (remoteSquads.length > 0) {
                         setExpandedSquads((prev) => (prev.length > 0 ? prev : [remoteSquads[0].id]));
                     }
@@ -235,7 +251,102 @@ export default function Squad() {
         return () => {
             active = false;
         };
-    }, [squadStorageKey, squadChatStorageKey]);
+    }, [squadStorageKey, squadChatStorageKey, squadReadStorageKey]);
+
+    useEffect(() => {
+        let active = true;
+
+        const loadRequests = async () => {
+            setIsRequestsLoading(true);
+            try {
+                const payload = await getConnectionRequests();
+                if (!active) return;
+                setConnectionRequests(Array.isArray(payload?.received) ? payload.received : []);
+                setSentConnectionRequests(Array.isArray(payload?.sent) ? payload.sent : []);
+                setSentRequestsCount(Array.isArray(payload?.sent) ? payload.sent.length : 0);
+            } catch {
+                if (!active) return;
+                setConnectionRequests([]);
+                setSentConnectionRequests([]);
+                setSentRequestsCount(0);
+            } finally {
+                if (active) {
+                    setIsRequestsLoading(false);
+                }
+            }
+        };
+
+        loadRequests();
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        const stateTarget = location?.state?.openChatTarget;
+        if (!stateTarget || typeof stateTarget !== "object") {
+            return;
+        }
+
+        const chatMember = {
+            id: String(stateTarget.id || stateTarget.uid || "").trim(),
+            username: String(stateTarget.username || "").trim(),
+            name: String(stateTarget.name || stateTarget.fullName || "Campus User").trim(),
+            avatar: String(stateTarget.avatar || stateTarget.profileImageUrl || "").trim(),
+            initials: String(
+                stateTarget.initials ||
+                String(stateTarget.name || stateTarget.fullName || "CU")
+                    .split(" ")
+                    .map((part) => part[0] || "")
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()
+            ),
+            role: String(stateTarget.role || "Student"),
+            college: String(stateTarget.college || "Campus"),
+            connectedVia: String(stateTarget.connectedVia || "Direct Message"),
+            status: String(stateTarget.status || "online"),
+        };
+
+        if (!chatMember.id) {
+            return;
+        }
+
+        setSquadsData((prev) => {
+            const hasAnyMember = prev.some((squad) =>
+                squad.members.some((member) => member.id === chatMember.id)
+            );
+
+            if (hasAnyMember) {
+                return prev;
+            }
+
+            if (prev.length === 0) {
+                return [
+                    {
+                        id: DEFAULT_SQUAD_ID,
+                        name: DEFAULT_SQUAD_NAME,
+                        color: "text-primary",
+                        bgColor: "bg-cyan-500",
+                        members: [chatMember],
+                    },
+                ];
+            }
+
+            return prev.map((squad, index) =>
+                index === 0
+                    ? {
+                        ...squad,
+                        members: [...squad.members, chatMember],
+                    }
+                    : squad
+            );
+        });
+
+        setChatTarget(chatMember);
+        navigate(location.pathname, { replace: true, state: {} });
+    }, [location.pathname, location.state, navigate]);
 
     useEffect(() => {
         try {
@@ -252,6 +363,13 @@ export default function Squad() {
     }, [squadChatStorageKey, chatByMemberId]);
 
     useEffect(() => {
+        try {
+            localStorage.setItem(squadReadStorageKey, JSON.stringify(readMessageCountByMemberId));
+        } catch {
+        }
+    }, [squadReadStorageKey, readMessageCountByMemberId]);
+
+    useEffect(() => {
         const timer = setTimeout(() => {
             saveSquadState({
                 squads: squadsData,
@@ -262,6 +380,25 @@ export default function Squad() {
 
         return () => clearTimeout(timer);
     }, [squadsData, chatByMemberId]);
+
+    useEffect(() => {
+        if (!chatTarget?.id) {
+            return;
+        }
+
+        setReadMessageCountByMemberId((prev) => {
+            const latestCount = Array.isArray(chatByMemberId?.[chatTarget.id]) ? chatByMemberId[chatTarget.id].length : 0;
+            const current = Number(prev?.[chatTarget.id]);
+            if (Number.isFinite(current) && current === latestCount) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                [chatTarget.id]: latestCount,
+            };
+        });
+    }, [chatTarget?.id, chatByMemberId]);
 
     const toggleSquad = (id) => {
         setExpandedSquads((prev) =>
@@ -293,9 +430,51 @@ export default function Squad() {
         setIsCreateSquadModalOpen(false);
     };
 
+    const unreadByMemberId = useMemo(() => {
+        const output = {};
+
+        for (const [memberId, messages] of Object.entries(chatByMemberId)) {
+            const safeMessages = Array.isArray(messages) ? messages : [];
+            const readCount = Number(readMessageCountByMemberId?.[memberId]);
+            const safeReadCount = Number.isFinite(readCount) && readCount >= 0 ? readCount : safeMessages.length;
+            const unseen = safeMessages.slice(safeReadCount);
+
+            output[memberId] = unseen.some((message) => {
+                const sender = String(message?.sender || "").toLowerCase();
+                if (sender === "them") {
+                    return true;
+                }
+
+                const senderId = String(message?.senderId || "").trim();
+                return senderId && senderId !== storageUserKey;
+            });
+        }
+
+        return output;
+    }, [chatByMemberId, readMessageCountByMemberId, storageUserKey]);
+
     const openChat = (member) => {
         setChatTarget(member);
         setIsChatMenuOpen(false);
+        setReadMessageCountByMemberId((prev) => {
+            const currentCount = Array.isArray(chatByMemberId?.[member?.id]) ? chatByMemberId[member.id].length : 0;
+            return {
+                ...prev,
+                [member.id]: currentCount,
+            };
+        });
+    };
+
+    const openMemberProfile = (member) => {
+        const preferredUsername = String(member?.username || "").trim().toLowerCase();
+        const fallbackUsername = toUsername(member?.name || "");
+        const targetUsername = preferredUsername || fallbackUsername;
+
+        if (!targetUsername) {
+            return;
+        }
+
+        navigate(`/profile/${targetUsername}`);
     };
 
     const closeChat = () => {
@@ -313,7 +492,7 @@ export default function Squad() {
         setIsChatMenuOpen(false);
     };
 
-    const sendChatMessage = () => {
+    const sendChatMessage = async () => {
         if (!chatTarget) {
             return;
         }
@@ -323,27 +502,92 @@ export default function Squad() {
             return;
         }
 
+        const optimisticMessage = {
+            id: `${chatTarget.id}-${Date.now()}`,
+            text: message,
+            sender: "me",
+            senderId: storageUserKey,
+            receiverId: chatTarget.id,
+            createdAt: new Date().toISOString(),
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        };
+
         setChatByMemberId((prev) => {
             const existing = prev[chatTarget.id] || [];
             return {
                 ...prev,
-                [chatTarget.id]: [
-                    ...existing,
-                    {
-                        id: `${chatTarget.id}-${Date.now()}`,
-                        text: message,
-                        sender: "me",
-                        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                    },
-                ],
+                [chatTarget.id]: [...existing, optimisticMessage],
             };
         });
 
         setChatInput("");
+
+        try {
+            const sent = await sendDirectMessage(chatTarget.id, message);
+            const savedMessage = sent?.chat;
+
+            if (savedMessage) {
+                setChatByMemberId((prev) => {
+                    const existing = prev[chatTarget.id] || [];
+                    const withoutOptimistic = existing.filter((item) => item.id !== optimisticMessage.id);
+                    return {
+                        ...prev,
+                        [chatTarget.id]: [...withoutOptimistic, savedMessage],
+                    };
+                });
+            }
+        } catch {
+            setChatByMemberId((prev) => {
+                const existing = prev[chatTarget.id] || [];
+                return {
+                    ...prev,
+                    [chatTarget.id]: existing.filter((item) => item.id !== optimisticMessage.id),
+                };
+            });
+            window.alert("Failed to send message. Try again.");
+        }
+    };
+
+    const respondRequest = async (requestId, action) => {
+        try {
+            await respondConnectionRequest(requestId, action);
+            setConnectionRequests((prev) =>
+                prev.map((request) =>
+                    request.id === requestId
+                        ? {
+                            ...request,
+                            status: action === "accept" ? "accepted" : "declined",
+                            respondedAt: new Date().toISOString(),
+                        }
+                        : request
+                )
+            );
+
+            const state = await getSquadState();
+            setSquadsData(normalizeSquads(state?.squads || []));
+            const refreshedChats = normalizeChats(state?.chatsByMemberId || {});
+            setChatByMemberId(refreshedChats);
+            setReadMessageCountByMemberId((prev) => {
+                const next = {};
+                for (const [memberId, messages] of Object.entries(refreshedChats)) {
+                    const existingCount = Number(prev?.[memberId]);
+                    next[memberId] = Number.isFinite(existingCount) && existingCount >= 0
+                        ? existingCount
+                        : Array.isArray(messages)
+                            ? messages.length
+                            : 0;
+                }
+                return next;
+            });
+        } catch {
+            window.alert("Failed to update request.");
+        }
     };
 
     const removeMember = (squadId, memberId, memberName) => {
-        const confirmRemove = window.confirm(`Remove ${memberName} from this squad?`);
+        const confirmRemove = window.confirm(
+            `Remove ${memberName} from this squad? This will also delete chat history with this member.`
+        );
         if (!confirmRemove) {
             return;
         }
@@ -355,6 +599,22 @@ export default function Squad() {
                     : squad
             )
         );
+
+        setChatByMemberId((prev) => {
+            const next = { ...prev };
+            delete next[memberId];
+            return next;
+        });
+
+        setReadMessageCountByMemberId((prev) => {
+            const next = { ...prev };
+            delete next[memberId];
+            return next;
+        });
+
+        if (chatTarget?.id === memberId) {
+            closeChat();
+        }
     };
 
     const openMoveModal = (fromSquadId, memberId, memberName) => {
@@ -466,6 +726,148 @@ export default function Squad() {
                 </div>
             </header>
 
+            <section
+                className={cn(
+                    "rounded-2xl border p-4 backdrop-blur-xl",
+                    isDark ? "border-slate-700/40 bg-slate-900/60" : "border-gray-200/50 bg-white/60"
+                )}
+            >
+                <div className="flex items-center justify-between gap-2">
+                    <h2 className={cn("text-sm font-semibold", isDark ? "text-slate-100" : "text-neutral-900")}>
+                        Connection Requests
+                    </h2>
+                    <p className={cn("text-xs", isDark ? "text-slate-300" : "text-neutral-700")}>
+                        {sentRequestsCount} sent
+                    </p>
+                </div>
+
+                {isRequestsLoading ? (
+                    <p className={cn("mt-3 text-xs", isDark ? "text-slate-400" : "text-neutral-600")}>Loading requests...</p>
+                ) : null}
+
+                {!isRequestsLoading && connectionRequests.filter((item) => item.status === "pending").length === 0 && sentConnectionRequests.filter((item) => item.status === "pending").length === 0 ? (
+                    <p className={cn("mt-3 text-xs", isDark ? "text-slate-400" : "text-neutral-600")}>
+                        No pending requests right now.
+                    </p>
+                ) : null}
+
+                <div className="mt-3 space-y-2">
+                    {sentConnectionRequests
+                        .filter((item) => item.status === "pending")
+                        .slice(0, 5)
+                        .map((request) => {
+                            const initials = String(request.toName || "CU")
+                                .split(" ")
+                                .map((part) => part[0] || "")
+                                .join("")
+                                .slice(0, 2)
+                                .toUpperCase();
+
+                            return (
+                                <div
+                                    key={`sent-${request.id}`}
+                                    className={cn(
+                                        "rounded-xl border px-3 py-2",
+                                        isDark ? "border-slate-700 bg-slate-800/50" : "border-gray-200 bg-white"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Avatar
+                                            src={request.toAvatar}
+                                            alt={request.toName || "Recipient"}
+                                            initials={initials}
+                                            className="h-9 w-9"
+                                        />
+
+                                        <div className="min-w-0 flex-1">
+                                            <p className={cn("truncate text-sm font-semibold", isDark ? "text-slate-100" : "text-neutral-900")}>
+                                                To: {request.toName || "Campus User"}
+                                            </p>
+                                            <p className={cn("truncate text-xs", isDark ? "text-slate-300" : "text-neutral-700")}>
+                                                {request.text}
+                                            </p>
+                                        </div>
+
+                                        <span
+                                            className={cn(
+                                                "rounded-md px-2 py-1 text-[10px] font-semibold",
+                                                isDark ? "border border-slate-600 text-slate-300" : "border border-gray-300 text-neutral-700"
+                                            )}
+                                        >
+                                            Sent
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                    {connectionRequests
+                        .filter((item) => item.status === "pending")
+                        .slice(0, 5)
+                        .map((request) => {
+                            const initials = String(request.fromName || "CU")
+                                .split(" ")
+                                .map((part) => part[0] || "")
+                                .join("")
+                                .slice(0, 2)
+                                .toUpperCase();
+
+                            return (
+                                <div
+                                    key={request.id}
+                                    className={cn(
+                                        "rounded-xl border px-3 py-2",
+                                        isDark ? "border-slate-700 bg-slate-800/50" : "border-gray-200 bg-white"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Avatar
+                                            src={request.fromAvatar}
+                                            alt={request.fromName}
+                                            initials={initials}
+                                            className="h-9 w-9"
+                                        />
+
+                                        <div className="min-w-0 flex-1">
+                                            <p className={cn("truncate text-sm font-semibold", isDark ? "text-slate-100" : "text-neutral-900")}>
+                                                {request.fromName}
+                                            </p>
+                                            <p className={cn("truncate text-xs", isDark ? "text-slate-300" : "text-neutral-700")}>
+                                                {request.text}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => respondRequest(request.id, "accept")}
+                                                className={cn(
+                                                    "rounded-md px-2.5 py-1 text-xs font-semibold",
+                                                    isDark
+                                                        ? "border border-cyan-500/30 bg-cyan-500/20 text-cyan-300"
+                                                        : "bg-cyan-600 text-white"
+                                                )}
+                                            >
+                                                Accept
+                                            </button>
+                                            <button
+                                                onClick={() => respondRequest(request.id, "decline")}
+                                                className={cn(
+                                                    "rounded-md px-2.5 py-1 text-xs font-semibold",
+                                                    isDark
+                                                        ? "border border-slate-600 text-slate-300"
+                                                        : "border border-gray-300 text-neutral-700"
+                                                )}
+                                            >
+                                                Decline
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                </div>
+            </section>
+
             <div className="space-y-4">
                 <div className="flex flex-col gap-4">
                     {squadsData.map((squad) => {
@@ -569,35 +971,44 @@ export default function Squad() {
                                                     idx !== squad.members.length - 1 && (isDark ? "border-b border-slate-700/50" : "border-b border-gray-100")
                                                 )}
                                             >
-                                                <div className="relative">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openMemberProfile(person)}
+                                                    className="relative"
+                                                    title={`Open ${person.name} profile`}
+                                                >
                                                     <Avatar
                                                         src={person.avatar}
                                                         alt={person.name}
                                                         initials={person.initials}
                                                         className="h-10 w-10"
                                                     />
-                                                    <StatusDot status={person.status} />
-                                                </div>
+                                                    <UnreadDot isVisible={Boolean(unreadByMemberId?.[person.id])} />
+                                                </button>
 
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center gap-2">
-                                                        <h3 className={cn("truncate text-sm font-semibold", isDark ? "text-slate-100" : "text-neutral-900")}>
-                                                            {person.name}
-                                                        </h3>
-                                                        <span
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openMemberProfile(person)}
                                                             className={cn(
-                                                                "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium",
-                                                                isDark
-                                                                    ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-300"
-                                                                    : "border-gray-300 text-neutral-800"
+                                                                "truncate text-left text-sm font-semibold underline-offset-2 hover:underline",
+                                                                isDark ? "text-slate-100" : "text-neutral-900"
                                                             )}
                                                         >
-                                                            {person.connectedVia}
-                                                        </span>
+                                                            {person.name}
+                                                        </button>
                                                     </div>
-                                                    <p className={cn("truncate text-xs", isDark ? "text-slate-300" : "text-neutral-700")}>
-                                                        {person.role} · {person.college}
-                                                    </p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openMemberProfile(person)}
+                                                        className={cn(
+                                                            "mt-1 text-xs font-medium underline-offset-2 hover:underline",
+                                                            isDark ? "text-cyan-300" : "text-cyan-700"
+                                                        )}
+                                                    >
+                                                        @{person.username || toUsername(person.name)}
+                                                    </button>
                                                 </div>
 
                                                 <div className="flex items-center gap-1">
@@ -630,7 +1041,7 @@ export default function Squad() {
                                                     <button
                                                         onClick={() => removeMember(squad.id, person.id, person.name)}
                                                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 transition hover:bg-red-50 hover:text-red-700"
-                                                        title="Remove"
+                                                        title="Remove member and delete chat history"
                                                     >
                                                         <UserMinus className="h-4 w-4" />
                                                     </button>
@@ -725,12 +1136,20 @@ export default function Squad() {
                                     className="h-10 w-10"
                                 />
                                 <div>
-                                    <h3 className={cn("text-sm font-semibold leading-tight", isDark ? "text-slate-100" : "text-neutral-900")}>
+                                    <button
+                                        type="button"
+                                        onClick={() => openMemberProfile(chatTarget)}
+                                        className={cn("text-sm font-semibold leading-tight underline-offset-2 hover:underline", isDark ? "text-slate-100" : "text-neutral-900")}
+                                    >
                                         {chatTarget.name}
-                                    </h3>
-                                    <p className={cn("text-xs", isDark ? "text-slate-400" : "text-neutral-500")}>
-                                        @{toUsername(chatTarget.name)}
-                                    </p>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => openMemberProfile(chatTarget)}
+                                        className={cn("block text-left text-xs underline-offset-2 hover:underline", isDark ? "text-slate-400" : "text-neutral-500")}
+                                    >
+                                        @{chatTarget.username || toUsername(chatTarget.name)}
+                                    </button>
                                 </div>
                             </div>
 
@@ -794,19 +1213,44 @@ export default function Squad() {
                                     </p>
                                 </div>
                             ) : (
-                                (chatByMemberId[chatTarget.id] || []).map((msg) => (
-                                    <div key={msg.id} className="flex justify-end">
-                                        <div
-                                            className={cn(
-                                                "max-w-[80%] rounded-xl px-3 py-2 text-sm",
-                                                isDark ? "bg-cyan-500/20 text-cyan-200" : "bg-cyan-100 text-cyan-800"
-                                            )}
-                                        >
-                                            <p>{msg.text}</p>
-                                            <p className={cn("mt-1 text-[10px]", isDark ? "text-cyan-300" : "text-cyan-700")}>{msg.time}</p>
+                                (chatByMemberId[chatTarget.id] || []).map((msg) => {
+                                    const isMine =
+                                        String(msg.sender || "").toLowerCase() === "me" ||
+                                        (msg.senderId && String(msg.senderId) === storageUserKey);
+
+                                    return (
+                                        <div key={msg.id} className={cn("flex", isMine ? "justify-end" : "justify-start")}>
+                                            <div
+                                                className={cn(
+                                                    "max-w-[80%] rounded-xl px-3 py-2 text-sm",
+                                                    isMine
+                                                        ? isDark
+                                                            ? "bg-cyan-500/20 text-cyan-200"
+                                                            : "bg-cyan-100 text-cyan-800"
+                                                        : isDark
+                                                            ? "bg-slate-800 text-slate-100"
+                                                            : "bg-gray-100 text-neutral-800"
+                                                )}
+                                            >
+                                                <p>{msg.text}</p>
+                                                <p
+                                                    className={cn(
+                                                        "mt-1 text-[10px]",
+                                                        isMine
+                                                            ? isDark
+                                                                ? "text-cyan-300"
+                                                                : "text-cyan-700"
+                                                            : isDark
+                                                                ? "text-slate-400"
+                                                                : "text-neutral-500"
+                                                    )}
+                                                >
+                                                    {msg.time}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
 

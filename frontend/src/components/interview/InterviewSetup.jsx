@@ -97,6 +97,7 @@ export default function InterviewSetup({ onStart }) {
 
             const sessionData = {
                 id: interviewId,
+                startedAt: Date.now(),
                 config: {
                     company,
                     role,

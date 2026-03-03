@@ -4,6 +4,8 @@ import { Mail, Lock, ArrowRight, Handshake, User, Eye, EyeOff } from 'lucide-rea
 import { login, register } from '../services/authService';
 import { useEffect } from 'react';
 import { useUserStore } from './../store/useUserStore';
+import { GoogleLogin } from '@react-oauth/google';
+import axios from 'axios';
 
 const Auth = () => {
   const user = useUserStore((state) => state.user);
@@ -111,8 +113,52 @@ const Auth = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setMessage('Google Sign-In is not connected yet. Use email/password login.');
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const googleToken = credentialResponse.credential;
+      
+      const res = await axios.post(
+        "http://localhost:5000/api/auth/google",
+        { token: googleToken },
+        { 
+          withCredentials: true // SUPER IMPORTANT: Iske bina backend cookie set nahi kar payega!
+        }
+      );
+
+      const authUser = res.data.data.user;
+      const token = res.data?.data?.token;
+
+      if (token) {
+        localStorage.setItem('auth-token', token);
+      }
+
+      setUser({
+          uid: authUser.uid || authUser.id,
+          id: authUser.id || authUser.uid,
+          username: authUser.username || username || identifier,
+          email: authUser.email || email,
+          name: authUser.fullName || '',
+          profile_pic: authUser.profileImageUrl || '',
+          campus: authUser.collegeName || '',
+          branch: authUser.headline || '',
+          bio: authUser.about || '',
+          profileCompletePercentage: authUser.profileCompletePercentage ?? 0,
+          tags: authUser.tags || [],
+          skills: authUser.skills || [],
+          interests: authUser.interests || [],
+          socialLinks: authUser.socialLinks || {},
+          education: authUser.education || [],
+          experience: authUser.experience || [],
+          projects: authUser.projects || [],
+          savedPosts: authUser.savedPosts || [],
+          savedThreads: authUser.savedThreads || [],
+        });
+      navigate('/home', { replace: true });
+
+    } catch (error) {
+      console.error("Error during Google Login:", error.response?.data || error.message);
+      alert("Google Login Failed. Try again.");
+    }
   };
 
   return (
@@ -303,15 +349,15 @@ const Auth = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleGoogleLogin}
-                  type="button"
-                  disabled={isLoading}
-                  className="mt-6 w-full bg-slate-800 border-2 border-slate-700 hover:border-slate-600 hover:bg-slate-700 text-slate-50 font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google logo" width="20" height="20" />
-                  Continue with Google
-                </button>
+                <div className="flex justify-center mt-4">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => {
+                      console.log('Google Sign In was unsuccessful');
+                    }}
+                    useOneTap
+                  />
+                </div>
               </div>
             )}
 

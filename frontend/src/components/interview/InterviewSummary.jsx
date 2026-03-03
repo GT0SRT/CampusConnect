@@ -2,11 +2,12 @@ import { useUserStore } from "../../store/useUserStore";
 import { ArrowLeft, TrendingUp, Clock, CheckCircle, AlertCircle, Award, Target } from "lucide-react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useInterviewStore } from "../../store/useInterviewStore";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { saveInterviewSummary } from "../../services/interviewHistoryService";
 
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "");
+const getPersistedInterviewCacheKey = (localInterviewId) => `persisted_interview_${String(localInterviewId || "")}`;
 
 export default function InterviewSummary({ interview, onBackToSetup }) {
   const theme = useUserStore((state) => state.theme);
@@ -18,12 +19,62 @@ export default function InterviewSummary({ interview, onBackToSetup }) {
   const { id } = useParams();
   const [isFetchingAnalysis, setIsFetchingAnalysis] = useState(false);
   const [analysisFetchError, setAnalysisFetchError] = useState(false);
+  const savingSummaryRef = useRef(new Set());
 
   const resolvedInterview =
     interview ||
     interviewHistory.find((item) => String(item.id) === String(id)) ||
     location.state?.interview ||
     null;
+
+  useEffect(() => {
+    if (!resolvedInterview?.id || resolvedInterview?.persistedRecordId) return;
+
+    const cachedPersistedId = window.localStorage.getItem(getPersistedInterviewCacheKey(resolvedInterview.id));
+    if (!cachedPersistedId) return;
+
+    updateHistoryInterview(resolvedInterview.id, {
+      persistedRecordId: cachedPersistedId,
+    });
+  }, [resolvedInterview?.id, resolvedInterview?.persistedRecordId, updateHistoryInterview]);
+
+  const persistSummaryIfNeeded = useCallback(async (analysisToSave) => {
+    if (!resolvedInterview?.id || !analysisToSave) return null;
+    if (resolvedInterview?.persistedRecordId) return resolvedInterview.persistedRecordId;
+
+    const cacheKey = getPersistedInterviewCacheKey(resolvedInterview.id);
+    const cachedPersistedId = window.localStorage.getItem(cacheKey);
+    if (cachedPersistedId) {
+      updateHistoryInterview(resolvedInterview.id, {
+        persistedRecordId: cachedPersistedId,
+      });
+      return cachedPersistedId;
+    }
+
+    if (savingSummaryRef.current.has(resolvedInterview.id)) {
+      return null;
+    }
+
+    savingSummaryRef.current.add(resolvedInterview.id);
+
+    try {
+      const savedRecord = await saveInterviewSummary({
+        interview: resolvedInterview,
+        analysis: analysisToSave,
+      });
+
+      if (savedRecord?.id) {
+        window.localStorage.setItem(cacheKey, String(savedRecord.id));
+        updateHistoryInterview(resolvedInterview.id, {
+          persistedRecordId: savedRecord.id,
+        });
+      }
+
+      return savedRecord?.id || null;
+    } finally {
+      savingSummaryRef.current.delete(resolvedInterview.id);
+    }
+  }, [resolvedInterview, resolvedInterview?.id, resolvedInterview?.persistedRecordId, updateHistoryInterview]);
 
   const runAnalysis = useCallback(async () => {
     if (!resolvedInterview?.id) return;
@@ -57,16 +108,7 @@ export default function InterviewSummary({ interview, onBackToSetup }) {
         status: "completed",
       });
 
-      if (!resolvedInterview.persistedRecordId) {
-        const savedRecord = await saveInterviewSummary({
-          interview: resolvedInterview,
-          analysis: data,
-        });
-
-        updateHistoryInterview(resolvedInterview.id, {
-          persistedRecordId: savedRecord?.id,
-        });
-      }
+      await persistSummaryIfNeeded(data);
     } catch {
       updateHistoryInterview(resolvedInterview.id, {
         analysis: null,
@@ -85,7 +127,7 @@ export default function InterviewSummary({ interview, onBackToSetup }) {
     resolvedInterview?.topics,
     resolvedInterview?.metadata?.resumeOverview,
     resolvedInterview?.duration,
-    resolvedInterview?.persistedRecordId,
+    persistSummaryIfNeeded,
     updateHistoryInterview,
   ]);
 
@@ -96,14 +138,7 @@ export default function InterviewSummary({ interview, onBackToSetup }) {
 
     const syncInterviewSummary = async () => {
       try {
-        const savedRecord = await saveInterviewSummary({
-          interview: resolvedInterview,
-          analysis: resolvedInterview.analysis,
-        });
-
-        updateHistoryInterview(resolvedInterview.id, {
-          persistedRecordId: savedRecord?.id,
-        });
+        await persistSummaryIfNeeded(resolvedInterview.analysis);
       } catch (error) {
         console.debug("Interview summary sync deferred", error);
       }
@@ -115,7 +150,7 @@ export default function InterviewSummary({ interview, onBackToSetup }) {
     resolvedInterview?.id,
     resolvedInterview?.analysis,
     resolvedInterview?.persistedRecordId,
-    updateHistoryInterview,
+    persistSummaryIfNeeded,
   ]);
 
   useEffect(() => {

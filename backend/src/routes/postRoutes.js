@@ -12,6 +12,7 @@ router.post("/unlike", auth, ctrl.unlikePost);
 router.post("/comment", auth, ctrl.addComment);
 router.get("/comments/:postId", auth, ctrl.getComments);
 router.delete("/comment/:commentId", auth, ctrl.deleteComment);
+router.get("/", auth, ctrl.getAllPosts);
 router.get("/posts", auth, ctrl.getAllPosts);
 
 module.exports = router;

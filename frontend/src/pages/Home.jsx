@@ -4,9 +4,11 @@ import FeedTabs from "../components/feed/FeedTabs";
 import PostCard from "../components/feed/PostCard";
 import { useHomeFeedController } from "../hooks/useHomeFeedController";
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 export default function Home() {
   const [selectedPost, setSelectedPost] = useState(null);
+  const [searchParams] = useSearchParams();
   const {
     user,
     theme,
@@ -24,6 +26,11 @@ export default function Home() {
     reset,
     handlePostCreated,
   } = useHomeFeedController();
+
+  const query = String(searchParams.get("q") || "").trim().toLowerCase();
+  const filteredPosts = !query
+    ? posts
+    : posts.filter((post) => String(post?.caption || "").toLowerCase().includes(query));
 
   return (
     <div className={`space-y-6 overflow-y-auto [&::-webkit-scrollbar]:hidden pb-40 transition-colors ${theme === 'dark' ? 'bg-transparent' : 'bg-transparent'
@@ -55,9 +62,9 @@ export default function Home() {
         )}
 
         {/* Posts List */}
-        {!isLoading && posts.length > 0 ? (
+        {!isLoading && filteredPosts.length > 0 ? (
           <>
-            {posts.map((post, index) => (
+            {filteredPosts.map((post, index) => (
               <PostCard
                 key={post.id}
                 post={post}
@@ -95,7 +102,7 @@ export default function Home() {
             : 'bg-white/40 border-gray-200/30'
             }`}>
             <p className={`text-center font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-gray-600'}`}>
-              No posts found in {activeTab}
+              No posts found{query ? ` for "${query}"` : ` in ${activeTab}`}
             </p>
             {activeTab !== "Global" && (
               <p className={`text-center text-xs mt-2 ${theme === 'dark' ? 'text-slate-400' : 'text-gray-500'}`}>

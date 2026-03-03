@@ -90,7 +90,7 @@ async function fetchAllPosts() {
     let cursor = null;
 
     while (true) {
-        const response = await api.get("/posts/posts", {
+        const response = await api.get("/posts/", {
             params: {
                 limit: 50,
                 ...(cursor ? { cursor } : {}),
@@ -122,7 +122,7 @@ export async function getPostsByUserId(uid) {
 }
 
 export async function getPaginatedFeed(cursor = null, limit = 5) {
-    const response = await api.get("/posts/posts", {
+    const response = await api.get("/posts/", {
         params: {
             limit,
             ...(cursor ? { cursor } : {}),
