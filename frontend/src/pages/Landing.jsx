@@ -13,7 +13,7 @@ const NAV_LINKS = [
   { label: "Features", href: "#features" },
   { label: "Career Suite", href: "#career" },
   { label: "Feedback", href: "#feedback" },
-  { label: "Pricing", href: "#pricing" },
+  // { label: "Pricing", href: "#pricing" },
   { label: "Contact", href: "#contact" },
 ];
 
@@ -98,37 +98,37 @@ const TESTIMONIALS = [
   },
 ];
 
-const PLANS = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Perfect for getting started on campus.",
-    features: [
-      "AI Matchmaker (3 matches/mo)",
-      "Threaded Discussions",
-      "Basic Auto Captioning",
-      "Community Access",
-    ],
-    cta: "Get Started",
-    highlighted: false,
-  },
-  {
-    name: "Campus Pro",
-    price: "$9",
-    period: "/month",
-    description: "Unlock the full CampusConnect experience.",
-    features: [
-      "Unlimited AI Matchmaking",
-      "Advanced Auto Captioning",
-      "Red Flag Detection",
-      "Alumni Networking",
-      "AI Mock Interviews",
-    ],
-    cta: "Upgrade to Pro",
-    highlighted: true,
-  },
-];
+// const PLANS = [
+//   {
+//     name: "Free",
+//     price: "$0",
+//     period: "forever",
+//     description: "Perfect for getting started on campus connect.",
+//     features: [
+//       "AI Matchmaker",
+//       "Threaded Discussions",
+//       "Basic Auto Captioning",
+//       "Community Access",
+//     ],
+//     cta: "Get Started",
+//     highlighted: false,
+//   },
+//   {
+//     name: "Campus Pro",
+//     price: "$9",
+//     period: "/month",
+//     description: "Unlock the full CampusConnect experience.",
+//     features: [
+//       "Unlimited AI Matchmaking",
+//       "Advanced Auto Captioning",
+//       "Red Flag Detection",
+//       "Alumni Networking",
+//       "AI Mock Interviews",
+//     ],
+//     cta: "Upgrade to Pro",
+//     highlighted: true,
+//   },
+// ];
 
 const SOCIALS = [
   { icon: Twitter, label: "Twitter", href: "#" },
@@ -422,7 +422,7 @@ export default function App() {
       </section>
 
       {/* ====== PRICING ====== */}
-      <section id="pricing" className="relative px-6 py-28">
+      {/* <section id="pricing" className="relative px-6 py-28">
         <div className="mx-auto max-w-5xl">
           <Reveal className="mb-16 text-center">
             <h2 className="text-3xl font-bold sm:text-5xl">Pricing</h2>
@@ -454,7 +454,7 @@ export default function App() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* ====== FEEDBACK ====== */}
       <section id="feedback" className="relative px-6 py-28">
